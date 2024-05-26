@@ -1,0 +1,8 @@
+---
+twitch_irc_server: "irc.chat.twitch.tv"
+twitch_irc_port: 6697
+twitch_channel_url: "https://www.twitch.tv/road_warrior99"
+twitch_irc_channel: "#road_warrior99"
+aws_region_id: "us-east-1"
+aws_secret_id: "raphael-bot"
+ai_setup_prompt_file: "raphael-prompt.txt"
