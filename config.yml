@@ -3,6 +3,18 @@ twitch_irc_server: "irc.chat.twitch.tv"
 twitch_irc_port: 6697
 twitch_channel_url: "https://www.twitch.tv/road_warrior99"
 twitch_irc_channel: "#road_warrior99"
+twitch_bot_response_prefix: "Raphael_bot: "
 aws_region_id: "us-east-1"
 aws_secret_id: "raphael-bot"
+aws_language_code: "en-US"
 ai_setup_prompt_file: "raphael-prompt.txt"
+ai_model: "gpt-3.5-turbo"
+command_bot_name: "Rafael" #"Raphael" AWS can't spell
+command_keywords:
+  - Block
+  - Mute
+  - Kick
+  - "I'll be right back."
+  - "Cut to camera one"
+  - "Cut to camera two"
+  - "Cut to camera three"

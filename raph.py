@@ -4,24 +4,51 @@ import irc.client
 import irc.connection
 import sys
 import asyncio
+from io import BytesIO
 import numpy as np
 from openai import OpenAI
+import whisper
 import functools
 import math
+import sounddevice
 import yaml
 import time
 from twitchrealtimehandler import (TwitchAudioGrabber, TwitchImageGrabber)
 import ssl
+import requests
+from fake_useragent import UserAgent
+from pydub import AudioSegment
+from pydub.exceptions import CouldntEncodeError
+import asyncio
+
+# This example uses aiofile for asynchronous file reads.
+# It's not a dependency of the project but can be installed
+# with `pip install aiofile`.
+import aiofile
+
+from amazon_transcribe.client import TranscribeStreamingClient
+from amazon_transcribe.handlers import TranscriptResultStreamHandler
+from amazon_transcribe.model import TranscriptEvent
+from amazon_transcribe.utils import apply_realtime_delay
 import itertools
 envfile  = '.' + os.sep + '.env'
 import json
 
+
 class raphael_bot():
     config_file = "config.yml"
     twitchChatCon = ""
+    tran_cleint = ""
     twitchServer = "irc.chat.twitch.tv"
     twitchNick = ""
     twitchChannel = ""
+    prompt_resposnes = dict()
+    prompt_timing = dict()
+    transcript = ""
+    command = ""
+    transcript_stack = []
+    captureCommand = False
+    last_ai_prompt = ""
     aiclient = ""
     secrets = ""
     irc_reactor = irc.client.Reactor()
@@ -33,6 +60,7 @@ class raphael_bot():
                 self.config_data = yaml.safe_load(ymlfile)
                 self.twitchServer = self.config_data['twitch_irc_server']
         self.secmgrclient = boto3.client('secretsmanager', region_name=self.config_data['aws_region_id'])
+        self.tran_cleint = boto3.client('transcribe')
         secResponse = self.secmgrclient.get_secret_value(SecretId=self.config_data['aws_secret_id'])
         if secResponse['SecretString']:
             self.secrets = json.loads(secResponse['SecretString'])
@@ -46,6 +74,10 @@ class raphael_bot():
                     with open(self.config_data["ai_setup_prompt_file"], 'r') as promptfile:
                         prompt = promptfile.read()
                 self.ai_query(prompt)
+
+                #clear secrets so we don't expose keys on twitch live
+                self.secrets['TwitchPassword'] = "Redacted"
+                self.secrets['OpenAIKey'] = "Redacted"
             else:
                 print("Problem pulling AWS Secret")
 
@@ -110,55 +142,214 @@ class raphael_bot():
         )
         self.aiclient = aiclient
         print("Connected to OpenAI")
+
+    def twitch_send_safe_message(self, message_out):
+        message_parts = 1
+        if len(message_out) > 255:
+            message_parts = math.ceil(len(message_out) / 255)
+        if self.twitchChatCon.connected:
+            if message_parts >1:
+                words = message_out.split(" ")
+                w = 0
+                for m in range(1, message_parts):
+                    #todo: implement word based messages rather than chr position
+                    msg_words = ""
+                    while len(msg_words) < 255 and len(words) >= w:
+                        msg_words += words[w] + " "
+                        w += 1
+                    if len(msg_words) > 255:
+                        w -= 1
+                        msg_words = msg_words[0:len(msg_words)-1-len(words[w])] #-1 to remove the trailing space
+
+                    self.twitchChatCon.privmsg(self.twitchChannel, msg_words)
+
+            else:
+                self.twitchChatCon.privmsg(self.twitchChannel, message_out)
+        else:
+            print("Twitch not connected. Message was:" + message_out)
     def ai_query(self, prompt):
         if self.aiclient:
-            stream = self.aiclient.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}],
-                stream=True,
-            )
-            message_out = "Raphael_bot: "
-            for chunk in stream:
-                if chunk.choices[0].delta.content is not None:
-                    #print(chunk.choices[0].delta.content, end="")
-                    message_out += chunk.choices[0].delta.content
-            message_out = message_out.replace("\n","")
-            message_parts = 1
-            if len(message_out) > 255:
-                message_parts = math.ceil(len(message_out) / 255)
-
-            if self.twitchChatCon.connected:
-                if message_parts >1:
-                    for m in range(1, message_parts):
-
-                        if m > 1:
-                            msgStart = m * 255
-                            time.sleep(1)
-                        else:
-                            msgStart = 0
-                        msgEnd = msgStart + 255
-                        if msgEnd > len(message_out):
-                            msgEnd = len(message_out)
-                        self.twitchChatCon.privmsg(self.twitchChannel, message_out[msgStart:msgEnd])
-                else:
-                    self.twitchChatCon.privmsg(self.twitchChannel, message_out)
+            if prompt not in self.prompt_resposnes.keys():
+                prompt += " Respond in a poem no longer than 150 words."
+                stream = self.aiclient.chat.completions.create(
+                    model=self.config_data['ai_model'],
+                    messages=[{"role": "user", "content": prompt}],
+                    stream=True,
+                )
+                message_out = self.config_data['twitch_bot_response_prefix']
+                for chunk in stream:
+                    if chunk.choices[0].delta.content is not None:
+                        #print(chunk.choices[0].delta.content, end="")
+                        message_out += chunk.choices[0].delta.content
+                message_out = message_out.replace("\n"," ")
+                self.prompt_resposnes[prompt] = message_out
+                self.prompt_timing[prompt] = time.time()
+                self.twitch_send_safe_message(message_out)
             else:
-                print(message_out)
+                #since we still the responses to all prompts, if it's been
+                # more than 2 minutes provide the previous answer.
+                if (time.time() - self.prompt_timing[prompt]).seconds > 120:
+                    print("Pulling prompt from cache and sending to twitch.")
+                    self.twitch_send_safe_message(self.prompt_resposnes[prompt])
+                else:
+                    print("Duplicate prompt, ignoring.")
         else:
             print("OpenAI is not connected")
+    def process_transcription(self, transcript):
+        if transcript: #way to chatty when it comes to sending messages to open AI
+            # NEed to figure out a way to wait longer for transcription to finish.
+            if "." in transcript or "?" in transcript:
+                self.transcript_stack.append(transcript)
+                if len(self.transcript_stack) > 2:
+                    if self.transcript_stack[-1] == transcript:
+                        if self.config_data["command_bot_name"] in transcript:
+                            print(self.config_data["command_bot_name"] + " heard it's name.")
+                            self.transcript_stack.pop()
+                            self.transcript_stack.pop()
+                            self.ai_query(transcript)
+                        else:
+                            for cmd in self.config_data["command_keywords"]:
+                                if cmd in transcript:
+                                    self.command += " " + transcript
+                                    print("Found Command " + cmd)
+                            else:
+                                self.transcript += " " + transcript
+
+    def extract_transcript(self, resp: str):
+        """
+        Extract the first results from google api speech recognition
+        Args:
+            resp: response from google api speech.
+        Returns:
+            The more confident prediction from the api
+            or an error if the response is malformatted
+        """
+        if "result" not in resp:
+            raise ValueError({"Error non valid response from api: {}".format(resp)})
+        for line in resp.split("\n"):
+            try:
+                line_json = json.loads(line)
+                out = line_json["result"][0]["alternative"][0]["transcript"]
+                return out
+            except Exception as exc:
+                print(exc)
+                continue
+
+    SAMPLE_RATE = 16000
+    BYTES_PER_SAMPLE = 2
+    CHANNEL_NUMS = 1
+
+    # An example file can be found at tests/integration/assets/test.wav
+    AUDIO_PATH = ""
+    CHUNK_SIZE = 1024 * 8
+    REGION = "us-east-1"
+
+
+    async def basic_transcribe(self):
+        # Setup up our client with our chosen AWS region
+        client = TranscribeStreamingClient(region=self.config_data['aws_region_id'])
+
+        # Start transcription to generate our async stream
+        stream = await client.start_stream_transcription(
+            language_code=self.config_data['aws_language_code'],
+            media_sample_rate_hz=16000,
+            media_encoding="pcm",
+        )
+        handler = self.MyEventHandler(stream.output_stream, self)
+        await asyncio.gather(self.write_chunks(stream), handler.handle_events())
+
+    async def write_chunks(self, stream):
+        # This connects the raw audio chunks generator coming from the microphone
+        # and passes them along to the transcription stream.
+        async for chunk, status in self.mic_stream():
+            await stream.input_stream.send_audio_event(audio_chunk=chunk)
+        await stream.input_stream.end_stream()
+
+
+    class MyEventHandler(TranscriptResultStreamHandler):
+        my_parent = ""
+        def __init__(self, transcript_result_stream):
+            self._transcript_result_stream = transcript_result_stream
+        def __init__(self,transcript_result_stream , parent):
+            self.my_parent = parent
+            self._transcript_result_stream = transcript_result_stream
+
+        async def handle_transcript_event(self, transcript_event: TranscriptEvent):
+            # This handler can be implemented to handle transcriptions as needed.
+            # Here's an example to get sqtarted.
+            results = transcript_event.transcript.results
+            for result in results:
+                for alt in result.alternatives:
+                    print(alt.transcript)
+                    self.my_parent.process_transcription(alt.transcript)
+    # for twitch streams
     def listen_to_stream(self, url):
-        audio_grabber = TwitchAudioGrabber(
-            twitch_url=url,
-            blocking=True,  # wait until a segment is available
-            segment_length=2,  # segment length in seconds
-            rate=16000,  # sampling rate of the audio
-            channels=2,  # number of channels
-            dtype=np.int16  # quality of the audio could be [np.int16, np.int32, np.float32, np.float64]
-            )
-        audio_segment = audio_grabber.grab()
-        return audio_segment
+            audio_grabber = TwitchAudioGrabber(
+                twitch_url=url,
+                blocking=True,  # wait until a segment is available
+                segment_length=2,  # segment length in seconds
+                rate=16000,  # sampling rate of the audio
+                channels=2,  # number of channels
+                dtype=np.int16  # quality of the audio could be [np.int16, np.int32, np.float32, np.float64]
+                )
+            loop = asyncio.get_event_loop()
+           # ua = UserAgent()
+            while True:
+                audio_segment = audio_grabber.grab_raw()
+                if audio_segment:
+                    raw = BytesIO(audio_segment)
+                    with open("temp", "wb") as a:
+                        a.write(audio_segment)
+                    try:
+                        raw_Wav = AudioSegment.from_raw(raw=raw, file="temp", sample_width=2, frame_rate=16000, channels=1)
+                    except CouldntEncodeError:
+                        print("Could not decode audio")
+                        continue
+                    raw_flac = BytesIO()
+                    raw_Wav.export(raw_flac, format="flac")#broken
+                    data = raw_flac.read()
+                    #transcript = self.api_speach(data, ua)
+                    with open("temp2","wb") as a:
+                        a.write(data)
+
+                    loop.run_until_complete(self.basic_transcribe("temp2"))
+                    #loop.close()
+                    #self.basic_transcribe("temp2")
+
+    async def mic_stream(self):
+        # This function wraps the raw input stream from the microphone forwarding
+        # the blocks to an asyncio.Queue.
+        loop = asyncio.get_event_loop()
+        input_queue = asyncio.Queue()
+
+        def callback(indata, frame_count, time_info, status):
+            loop.call_soon_threadsafe(input_queue.put_nowait, (bytes(indata), status))
+
+        # Be sure to use the correct parameters for the audio stream that matches
+        # the audio formats described for the source language you'll be using:
+        # https://docs.aws.amazon.com/transcribe/latest/dg/streaming.html
+        stream = sounddevice.RawInputStream(
+            channels=1,
+            samplerate=16000,
+            callback=callback,
+            blocksize=1024 * 2,
+            dtype="int16",
+        )
+        # Initiate the audio stream and asynchronously yield the audio chunks
+        # as they become available.
+        with stream:
+            while True:
+                indata, status = await input_queue.get()
+                yield indata, status
+    def listen_local(self):
+        loop = asyncio.get_event_loop()
+        print("Listening to local Mic")
+        loop.run_until_complete(self.basic_transcribe())
+        loop.close()
 if __name__ == '__main__':
     raph = raphael_bot()
-    raph.sendTwitchMessage("Starting questions for Raphael...")
-    raph.ai_query("Raphael please tell me about the first of the seven hells in DnD.")
-    transcription = raph.listen_to_stream("https://www.twitch.tv/road_warrior99")
+    #raph.sendTwitchMessage("Starting questions for Raphael...")
+    #raph.ai_query("Raphael please tell me about the first of the seven hells in DnD.")
+    #test_url = "https://www.twitch.tv/road_warrior99"
+    #audio_segment = raph.listen_to_stream(test_url)
+    raph.listen_local()
