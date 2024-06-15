@@ -242,8 +242,10 @@ class raphael_bot():
                                 if cmd in transcript:
                                     self.command += " " + transcript
                                     print("Found Command " + cmd)
-                                    if "Cut to everything" in cmd:
+                                    if "Cut to scene everything." in cmd:
                                         self.obs_set_scene("Everything")
+                                    if "Cut to scene development and browser" in cmd:
+                                        self.obs_set_scene("Development and Browser")
                             else:
                                 self.transcript += " " + transcript
 
