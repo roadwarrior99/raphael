@@ -9,12 +9,14 @@ aws_secret_id: "raphael-bot"
 aws_language_code: "en-US"
 ai_setup_prompt_file: "raphael-prompt.txt"
 ai_model: "gpt-3.5-turbo"
+obs_studio_host: "localhost"
+obs_studio_port: "4455"
 command_bot_name: "Rafael" #"Raphael" AWS can't spell
 command_keywords:
   - Block
   - Mute
   - Kick
   - "I'll be right back."
-  - "Cut to camera one"
+  - "Cut to everything"
   - "Cut to camera two"
   - "Cut to camera three"

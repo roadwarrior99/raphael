@@ -4,6 +4,7 @@ import irc.client
 import irc.connection
 import sys
 import asyncio
+from obswebsocket import obsws, requests
 from io import BytesIO
 import numpy as np
 from openai import OpenAI
@@ -46,6 +47,8 @@ class raphael_bot():
     prompt_timing = dict()
     transcript = ""
     command = ""
+    obsclient = ""
+    obs_scene_list = ""
     transcript_stack = []
     captureCommand = False
     last_ai_prompt = ""
@@ -69,17 +72,44 @@ class raphael_bot():
                 self.twitchChannel = self.config_data['twitch_irc_channel']
                 self.irc_connect()
                 self.ai_login()
+                self.obs_connect()
                 prompt = "Your purpose is to provide helpful information."
                 if os.path.exists(self.config_data["ai_setup_prompt_file"]):
                     with open(self.config_data["ai_setup_prompt_file"], 'r') as promptfile:
                         prompt = promptfile.read()
                 self.ai_query(prompt)
-
+                self.obs_connect()
                 #clear secrets so we don't expose keys on twitch live
                 self.secrets['TwitchPassword'] = "Redacted"
                 self.secrets['OpenAIKey'] = "Redacted"
+                self.secrets['ObsStudioServerKey'] = "Redacted"
             else:
                 print("Problem pulling AWS Secret")
+    def obs_connect(self):
+        self.obsclient = obsws(self.config_data['obs_studio_host'],self.config_data['obs_studio_port'],self.secrets['ObsStudioServerKey'])
+        self.obsclient.connect()
+        #print("OBS Server version " + self.obsclient.call(requests.GetVersion()).getObsVersion())
+
+    def obs_get_scenes(self):
+        if self.obsclient:
+            try:
+                scenes = self.obsclient.call(requests.GetSceneList())
+                self.obs_scene_list = scenes.getScenes()
+                print("Available Scenes")
+                print(self.obs_scene_list)
+            except KeyboardInterrupt:
+                pass
+
+    def obs_set_scene(self, scene_name):
+        if self.obsclient:
+            if not self.obs_scene_list:
+                self.obs_get_scenes()
+            if scene_name in self.obs_scene_list:
+                self.obsclient.call(requests.SetCurrentScene(**{'scene-name': scene_name}))
+            else:
+                print("Scene not found")
+        else:
+            print("OBS not connected.")
 
     def irc_on_connect(self, con,event):
         if irc.client.is_channel(self.twitchChannel):
@@ -212,6 +242,8 @@ class raphael_bot():
                                 if cmd in transcript:
                                     self.command += " " + transcript
                                     print("Found Command " + cmd)
+                                    if "Cut to everything" in cmd:
+                                        self.obs_set_scene("Everything")
                             else:
                                 self.transcript += " " + transcript
 
