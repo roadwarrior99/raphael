@@ -242,12 +242,13 @@ class raphael_bot():
                                 if cmd in transcript:
                                     self.command += " " + transcript
                                     print("Found Command " + cmd)
-                                    if "Cut to scene everything." in cmd:
-                                        self.obs_set_scene("Everything")
-                                    if "Cut to scene development and browser" in cmd:
-                                        self.obs_set_scene("Development and Browser")
-                            else:
-                                self.transcript += " " + transcript
+                                    if cmd == "Scene":
+                                        for scene_name, scene_keywords in self.config_data["obs_scene_keywords"].items():
+                                            if scene_keywords in transcript:
+                                                print("Switching to scene " + scene_name)
+                                                self.obs_set_scene(scene_name)
+                    else:
+                        self.transcript += " " + transcript
 
     def extract_transcript(self, resp: str):
         """

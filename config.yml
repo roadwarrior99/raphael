@@ -17,3 +17,8 @@ command_keywords:
   - Mute
   - Kick
   - Scene
+obs_scene_keywords:
+  "Everything": "Scene full screen."
+  "Development and Browser": "Scene split screen"
+  "Pycharm": "Scene development"
+  "BRB": "Scene be right back."
