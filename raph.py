@@ -4,12 +4,13 @@ import irc.client
 import irc.connection
 import sys
 import asyncio
-from obswebsocket import obsws, requests
+
 from io import BytesIO
 import numpy as np
 from openai import OpenAI
 import whisper
 import functools
+import obsws_python as obs
 import math
 import sounddevice
 import yaml
@@ -86,17 +87,21 @@ class raphael_bot():
             else:
                 print("Problem pulling AWS Secret")
     def obs_connect(self):
-        self.obsclient = obsws(self.config_data['obs_studio_host'],self.config_data['obs_studio_port'],self.secrets['ObsStudioServerKey'])
-        self.obsclient.connect()
+        self.obsclient = obs.ReqClient(host=self.config_data['obs_studio_host'],port=self.config_data['obs_studio_port'],password=self.secrets['ObsStudioServerKey'])
+        version = self.obsclient.get_version()
+        print("OBS Version:" + version.obs_version)
         #print("OBS Server version " + self.obsclient.call(requests.GetVersion()).getObsVersion())
 
     def obs_get_scenes(self):
+        scenes = dict()
         if self.obsclient:
             try:
-                scenes = self.obsclient.call(requests.GetSceneList())
-                self.obs_scene_list = scenes.getScenes()
+                scenesObj = self.obsclient.get_scene_list().scenes
+                for obj in scenesObj:
+                    scenes[obj['sceneName']] = obj['sceneIndex']
+                self.obs_scene_list = scenes
                 print("Available Scenes")
-                print(self.obs_scene_list)
+                print(self.obs_scene_list.keys())
             except KeyboardInterrupt:
                 pass
 
@@ -104,8 +109,9 @@ class raphael_bot():
         if self.obsclient:
             if not self.obs_scene_list:
                 self.obs_get_scenes()
-            if scene_name in self.obs_scene_list:
-                self.obsclient.call(requests.SetCurrentScene(**{'scene-name': scene_name}))
+            if scene_name in self.obs_scene_list.keys():
+                self.obsclient.set_current_program_scene(scene_name)
+                print("Switched scene to " + scene_name)
             else:
                 print("Scene not found")
         else:
@@ -387,4 +393,5 @@ if __name__ == '__main__':
     #raph.ai_query("Raphael please tell me about the first of the seven hells in DnD.")
     #test_url = "https://www.twitch.tv/road_warrior99"
     #audio_segment = raph.listen_to_stream(test_url)
-    raph.listen_local()
+    #raph.listen_local()
+    raph.obs_set_scene("Everything")
