@@ -52,8 +52,10 @@ class raphael_bot():
     obs_scene_list = ""
     transcript_stack = []
     captureCommand = False
+    text_to_speach = False
     last_ai_prompt = ""
     aiclient = ""
+    pollyclient = ""
     secrets = ""
     irc_reactor = irc.client.Reactor()
     secmgrclient = ""
@@ -74,6 +76,7 @@ class raphael_bot():
                 self.irc_connect()
                 self.ai_login()
                 self.obs_connect()
+                self.pollyclient = boto3.client("polly")
                 prompt = "Your purpose is to provide helpful information."
                 if os.path.exists(self.config_data["ai_setup_prompt_file"]):
                     with open(self.config_data["ai_setup_prompt_file"], 'r') as promptfile:
@@ -126,6 +129,23 @@ class raphael_bot():
         print("Joined " + self.twitchChannel)
         self.twitchChatCon.privmsg(self.twitchChannel, "Raphael is listening from the hell.")
         self.main_irc_loop(con)
+
+    def polly_say(self, text_to_speach):
+        if self.pollyclient:
+            response = self.pollyclient.synthesize_speech(
+                Engine=self.config_data['aws_polly_engine'],
+                LanguageCode='en-US',
+                OutputFormat='mp3',
+                SampleRate='16000',
+                Text=text_to_speach,
+                TextType='text',
+                VoiceId=self.config_data['aws_polly_voice']
+                )
+            # temp write to a file for debuging
+            file = open('speech.mp3', 'wb')
+            file.write(response['AudioStream'].read())
+            file.close()
+            return response['AudioStream']
 
     def irc_on_disconnect(self, connection, event):
         raise SystemExit()
@@ -213,6 +233,7 @@ class raphael_bot():
                     stream=True,
                 )
                 message_out = self.config_data['twitch_bot_response_prefix']
+
                 for chunk in stream:
                     if chunk.choices[0].delta.content is not None:
                         #print(chunk.choices[0].delta.content, end="")
@@ -220,6 +241,9 @@ class raphael_bot():
                 message_out = message_out.replace("\n"," ")
                 self.prompt_resposnes[prompt] = message_out
                 self.prompt_timing[prompt] = time.time()
+                if self.text_to_speach:
+                    #Text_To_Speach out here
+                    audio_out = self.polly_say(message_out)
                 self.twitch_send_safe_message(message_out)
             else:
                 #since we still the responses to all prompts, if it's been
@@ -382,6 +406,9 @@ class raphael_bot():
             while True:
                 indata, status = await input_queue.get()
                 yield indata, status
+    def obs_play_audio(self, audio):
+        current_scene_name = ""
+        self.obsclient.create_input(sceneName=current_scene_name,inputName="temp text to speach", inputKind="mp3", )
     def listen_local(self):
         loop = asyncio.get_event_loop()
         print("Listening to local Mic")
@@ -394,4 +421,8 @@ if __name__ == '__main__':
     #test_url = "https://www.twitch.tv/road_warrior99"
     #audio_segment = raph.listen_to_stream(test_url)
     #raph.listen_local()
-    raph.obs_set_scene("Everything")
+    #raph.obs_set_scene("Everything")
+    raph.text_to_speach = True
+    raph.ai_query("Tell me of the 7 hells.")
+
+
