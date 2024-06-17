@@ -408,7 +408,11 @@ class raphael_bot():
                 yield indata, status
     def obs_play_audio(self, audio):
         current_scene_name = ""
-        self.obsclient.create_input(sceneName=current_scene_name,inputName="temp text to speach", inputKind="mp3", )
+        temp_input_name = "temp text to speach"
+        self.obsclient.create_input(sceneName=current_scene_name, inputName=temp_input_name
+                                    , inputKind="mp3")
+        self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART")
+
     def listen_local(self):
         loop = asyncio.get_event_loop()
         print("Listening to local Mic")
