@@ -9,6 +9,7 @@ from io import BytesIO
 import numpy as np
 from openai import OpenAI
 import whisper
+import datetime
 import functools
 import obsws_python as obs
 import math
@@ -49,6 +50,7 @@ class raphael_bot():
     prompt_timing = dict()
     transcript = ""
     command = ""
+    logger = logging.getLogger(__name__)
     obsclient = ""
     obs_scene_list = ""
     transcript_stack = []
@@ -65,10 +67,15 @@ class raphael_bot():
         if os.path.exists(self.config_file):
             with open(self.config_file, 'r') as ymlfile:
                 self.config_data = yaml.safe_load(ymlfile)
+                timeobj = datetime.datetime.now()
+                logFileName = "raph_" + timeobj.strftime(self.config_data["log_filename_format"]) + ".log"
+                logging.basicConfig(filename=logFileName, level=logging.INFO, format=self.config_data["log_format"])
                 self.twitchServer = self.config_data['twitch_irc_server']
+                self.logger.info("Twitch Server: {0}".format(self.twitchServer))
         self.secmgrclient = boto3.client('secretsmanager', region_name=self.config_data['aws_region_id'])
         self.tran_cleint = boto3.client('transcribe')
         secResponse = self.secmgrclient.get_secret_value(SecretId=self.config_data['aws_secret_id'])
+        self.logger.info("AWS Secrets manager response: {0}".format(secResponse["ResponseMetadata"]["HTTPStatusCode"]))
         if secResponse['SecretString']:
             self.secrets = json.loads(secResponse['SecretString'])
             if self.secrets['TwitchNickName']:
@@ -83,18 +90,19 @@ class raphael_bot():
                     with open(self.config_data["ai_setup_prompt_file"], 'r') as promptfile:
                         prompt = promptfile.read()
                 self.ai_query(prompt)
-                self.obs_connect()
                 #clear secrets so we don't expose keys on twitch live
                 self.secrets['TwitchPassword'] = "Redacted"
                 self.secrets['OpenAIKey'] = "Redacted"
                 self.secrets['ObsStudioServerKey'] = "Redacted"
+                self.logger.info("Passwords redacted from secrets variable.")
             else:
                 print("Problem pulling AWS Secret")
     def obs_connect(self):
         self.obsclient = obs.ReqClient(host=self.config_data['obs_studio_host'],port=self.config_data['obs_studio_port'],password=self.secrets['ObsStudioServerKey'])
         version = self.obsclient.get_version()
-        print("OBS Version:" + version.obs_version)
-        #print("OBS Server version " + self.obsclient.call(requests.GetVersion()).getObsVersion())
+        obs_ver_str = "OBS Version:" + version.obs_version
+        print(obs_ver_str)
+        self.logger.info(obs_ver_str)
 
     def obs_get_scenes(self):
         scenes = dict()
@@ -133,6 +141,7 @@ class raphael_bot():
 
     def polly_say(self, text_to_speach):
         if self.pollyclient:
+            self.logger.info("Started polly_say")
             response = self.pollyclient.synthesize_speech(
                 Engine=self.config_data['aws_polly_engine'],
                 LanguageCode='en-US',
@@ -142,12 +151,14 @@ class raphael_bot():
                 TextType='text',
                 VoiceId=self.config_data['aws_polly_voice']
                 )
+            self.logger.info("Ended polly_say request: " + str(response["ResponseMetadata"]["HTTPStatusCode"]))
             # temp write to a file for debuging
             if os.path.exists("speach.mp3"):
                 os.remove("speach.mp3")
             file = open('speech.mp3', 'wb')
             file.write(response['AudioStream'].read())
             file.close()
+            self.logger.info("polly_say: Finished writing mp3 file.")
             return response['AudioStream']
 
     def irc_on_disconnect(self, connection, event):
@@ -221,13 +232,16 @@ class raphael_bot():
                         msg_words = msg_words[0:len(msg_words)-1-len(words[w])] #-1 to remove the trailing space
 
                     self.twitchChatCon.privmsg(self.twitchChannel, msg_words)
+                    self.logger.info("IRCChatOut: " + msg_words)
 
             else:
                 self.twitchChatCon.privmsg(self.twitchChannel, message_out)
+                self.logger.info("IRCChatOut: " + message_out)
         else:
             print("Twitch not connected. Message was:" + message_out)
     def ai_query(self, prompt):
         if self.aiclient:
+            self.logger.info("ai_query called with prompt: {0}".format(prompt))
             if prompt not in self.prompt_resposnes.keys():
                 prompt += " Respond in a poem no longer than 150 words."
                 stream = self.aiclient.chat.completions.create(
@@ -242,6 +256,7 @@ class raphael_bot():
                         #print(chunk.choices[0].delta.content, end="")
                         message_out += chunk.choices[0].delta.content
                 message_out = message_out.replace("\n"," ")
+                self.logger.info("openai responded with message: {0}".format(message_out))
                 self.prompt_resposnes[prompt] = message_out
                 self.prompt_timing[prompt] = time.time()
                 if self.text_to_speach:
@@ -265,7 +280,9 @@ class raphael_bot():
     def process_transcription(self, transcript):
         if transcript: #way to chatty when it comes to sending messages to open AI
             # NEed to figure out a way to wait longer for transcription to finish.
+            self.logger.info("process_transcription: " + transcript)
             if "." in transcript or "?" in transcript:
+                print(transcript)
                 #self.transcript_stack.append(transcript)
 
                 if self.config_data["command_bot_name"] in transcript:
@@ -350,7 +367,7 @@ class raphael_bot():
             results = transcript_event.transcript.results
             for result in results:
                 for alt in result.alternatives:
-                    print(alt.transcript)
+                    #print(alt.transcript)
                     self.my_parent.process_transcription(alt.transcript)
     # for twitch streams
     def listen_to_stream(self, url):
@@ -413,6 +430,7 @@ class raphael_bot():
                 yield indata, status
     def obs_play_audio(self, audio):
         #TODO get current scene
+        self.logger.info("Started: obs_play_audio")
         current_scene_name = "Development and Browser"
         temp_input_name = "Raphael_vo"
         inputSettings= {
@@ -427,6 +445,7 @@ class raphael_bot():
             if input["inputName"] == temp_input_name:
                 #foundInput = True
                 self.obsclient.remove_input(temp_input_name)
+                self.logger.info("obs_play_audio: Found an existing media source.")
                 time.sleep(1) #Lazy
 
         self.obsclient.create_input(sceneItemEnabled=True, sceneName=current_scene_name, inputName=temp_input_name
@@ -437,6 +456,7 @@ class raphael_bot():
         #self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP")
             #Maybe if we stop it, it will clear the cache
         self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART")
+        self.logger.info("obs_play_audio finished calling obs.")
         #How do we know when the source input has finished playing?
         #self.obsclient.remove_input(temp_input_name)
     def listen_local(self):
@@ -454,9 +474,9 @@ if __name__ == '__main__':
     #raph.obs_set_scene("Everything")
     raph.text_to_speach = True
     #raph.ai_query("Are you useful at math?")
-    #raph.ai_query("What is McDonalds?")
+    raph.ai_query("What is 1+1?")
     #raph.obs_play_audio("/home/colin/python/raphael/speech.mp3")
-    raph.listen_local()
+    #raph.listen_local()
     #Issues:
     #Process to get his voice and then play it in obs needs to be async
     #Transcription processing needs to be smarter ab out dupes

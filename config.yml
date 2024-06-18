@@ -1,4 +1,6 @@
 ---
+log_filename_format: "%Y-%m-%d %H:%M:%S"
+log_format: "'%(asctime)s: %(name)s: %(message)s'"
 twitch_irc_server: "irc.chat.twitch.tv"
 twitch_irc_port: 6697
 twitch_channel_url: "https://www.twitch.tv/road_warrior99"
