@@ -13,6 +13,7 @@ import functools
 import obsws_python as obs
 import math
 import sounddevice
+import logging
 import yaml
 import time
 from twitchrealtimehandler import (TwitchAudioGrabber, TwitchImageGrabber)
@@ -261,7 +262,7 @@ class raphael_bot():
                     print("Duplicate prompt, ignoring.")
         else:
             print("OpenAI is not connected")
-    async def process_transcription(self, transcript):
+    def process_transcription(self, transcript):
         if transcript: #way to chatty when it comes to sending messages to open AI
             # NEed to figure out a way to wait longer for transcription to finish.
             if "." in transcript or "?" in transcript:
@@ -418,7 +419,7 @@ class raphael_bot():
             "visible" : True,
             "LocalFile" : True,
             "local_file" : audio,
-            "Restart": True
+            "Restart": False
         }
         inputs = self.obsclient.get_input_list(kind="ffmpeg_source")
         #foundInput = False
@@ -426,7 +427,7 @@ class raphael_bot():
             if input["inputName"] == temp_input_name:
                 #foundInput = True
                 self.obsclient.remove_input(temp_input_name)
-                time.sleep(1)
+                time.sleep(1) #Lazy
 
         self.obsclient.create_input(sceneItemEnabled=True, sceneName=current_scene_name, inputName=temp_input_name
                                         , inputKind="ffmpeg_source", inputSettings=inputSettings )
@@ -452,10 +453,10 @@ if __name__ == '__main__':
     #raph.listen_local()
     #raph.obs_set_scene("Everything")
     raph.text_to_speach = True
-    raph.ai_query("Are you useful at math?")
-    raph.ai_query("What is McDonalds?")
+    #raph.ai_query("Are you useful at math?")
+    #raph.ai_query("What is McDonalds?")
     #raph.obs_play_audio("/home/colin/python/raphael/speech.mp3")
-    #raph.listen_local()
+    raph.listen_local()
     #Issues:
     #Process to get his voice and then play it in obs needs to be async
     #Transcription processing needs to be smarter ab out dupes
