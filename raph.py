@@ -4,7 +4,7 @@ import irc.client
 import irc.connection
 import sys
 import asyncio
-
+import pathlib
 from io import BytesIO
 import numpy as np
 from openai import OpenAI
@@ -142,6 +142,8 @@ class raphael_bot():
                 VoiceId=self.config_data['aws_polly_voice']
                 )
             # temp write to a file for debuging
+            if os.path.exists("speach.mp3"):
+                os.remove("speach.mp3")
             file = open('speech.mp3', 'wb')
             file.write(response['AudioStream'].read())
             file.close()
@@ -232,7 +234,7 @@ class raphael_bot():
                     messages=[{"role": "user", "content": prompt}],
                     stream=True,
                 )
-                message_out = self.config_data['twitch_bot_response_prefix']
+                message_out = ""
 
                 for chunk in stream:
                     if chunk.choices[0].delta.content is not None:
@@ -244,6 +246,10 @@ class raphael_bot():
                 if self.text_to_speach:
                     #Text_To_Speach out here
                     audio_out = self.polly_say(message_out)
+                    audio_path = os.path.join(pathlib.Path(__file__).parent.resolve(), "speech.mp3")
+                    self.obs_play_audio(audio_path)
+
+                message_out = self.config_data['twitch_bot_response_prefix'] + message_out
                 self.twitch_send_safe_message(message_out)
             else:
                 #since we still the responses to all prompts, if it's been
@@ -255,30 +261,28 @@ class raphael_bot():
                     print("Duplicate prompt, ignoring.")
         else:
             print("OpenAI is not connected")
-    def process_transcription(self, transcript):
+    async def process_transcription(self, transcript):
         if transcript: #way to chatty when it comes to sending messages to open AI
             # NEed to figure out a way to wait longer for transcription to finish.
             if "." in transcript or "?" in transcript:
-                self.transcript_stack.append(transcript)
-                if len(self.transcript_stack) > 2:
-                    if self.transcript_stack[-1] == transcript:
-                        if self.config_data["command_bot_name"] in transcript:
-                            print(self.config_data["command_bot_name"] + " heard it's name.")
-                            self.transcript_stack.pop()
-                            self.transcript_stack.pop()
-                            self.ai_query(transcript)
-                        else:
-                            for cmd in self.config_data["command_keywords"]:
-                                if cmd in transcript:
-                                    self.command += " " + transcript
-                                    print("Found Command " + cmd)
-                                    if cmd == "Scene":
-                                        for scene_name, scene_keywords in self.config_data["obs_scene_keywords"].items():
-                                            if scene_keywords in transcript:
-                                                print("Switching to scene " + scene_name)
-                                                self.obs_set_scene(scene_name)
-                    else:
-                        self.transcript += " " + transcript
+                #self.transcript_stack.append(transcript)
+
+                if self.config_data["command_bot_name"] in transcript:
+                    print(self.config_data["command_bot_name"] + " heard it's name.")
+                    #self.transcript_stack.pop()
+                    #self.transcript_stack.pop()
+                    self.ai_query(transcript)
+                else:
+                    for cmd in self.config_data["command_keywords"]:
+                        if cmd in transcript:
+                            self.command += " " + transcript
+                            print("Found Command " + cmd)
+                            if cmd == "Scene":
+                                for scene_name, scene_keywords in self.config_data["obs_scene_keywords"].items():
+                                    if scene_keywords in transcript:
+                                        print("Switching to scene " + scene_name)
+                                        self.obs_set_scene(scene_name)
+
 
     def extract_transcript(self, resp: str):
         """
@@ -407,12 +411,33 @@ class raphael_bot():
                 indata, status = await input_queue.get()
                 yield indata, status
     def obs_play_audio(self, audio):
-        current_scene_name = ""
-        temp_input_name = "temp text to speach"
-        self.obsclient.create_input(sceneName=current_scene_name, inputName=temp_input_name
-                                    , inputKind="mp3")
-        self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART")
+        #TODO get current scene
+        current_scene_name = "Development and Browser"
+        temp_input_name = "Raphael_vo"
+        inputSettings= {
+            "visible" : True,
+            "LocalFile" : True,
+            "local_file" : audio,
+            "Restart": True
+        }
+        inputs = self.obsclient.get_input_list(kind="ffmpeg_source")
+        #foundInput = False
+        for input in inputs.inputs:
+            if input["inputName"] == temp_input_name:
+                #foundInput = True
+                self.obsclient.remove_input(temp_input_name)
+                time.sleep(1)
 
+        self.obsclient.create_input(sceneItemEnabled=True, sceneName=current_scene_name, inputName=temp_input_name
+                                        , inputKind="ffmpeg_source", inputSettings=inputSettings )
+            #Can't remove the scene input until it finishes playing.
+
+            #The file name will not change, so just play the source.
+        #self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP")
+            #Maybe if we stop it, it will clear the cache
+        self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART")
+        #How do we know when the source input has finished playing?
+        #self.obsclient.remove_input(temp_input_name)
     def listen_local(self):
         loop = asyncio.get_event_loop()
         print("Listening to local Mic")
@@ -427,6 +452,12 @@ if __name__ == '__main__':
     #raph.listen_local()
     #raph.obs_set_scene("Everything")
     raph.text_to_speach = True
-    raph.ai_query("Tell me of the 7 hells.")
-
-
+    raph.ai_query("Are you useful at math?")
+    raph.ai_query("What is McDonalds?")
+    #raph.obs_play_audio("/home/colin/python/raphael/speech.mp3")
+    #raph.listen_local()
+    #Issues:
+    #Process to get his voice and then play it in obs needs to be async
+    #Transcription processing needs to be smarter ab out dupes
+    #Need to get current scene to add kinput too
+    #Voice generation / and open ai query plus obs source take so long that transcription times out.
