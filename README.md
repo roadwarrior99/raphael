@@ -17,6 +17,7 @@ Other packages may currently be referenced but unused.
 ### Web Service Integrations
 - OpenAI
 - AWS
+- OBS Studio Webhooks
 
 ## AWS Setup
 ### AWS CLI User permissions required:
