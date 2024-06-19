@@ -63,6 +63,16 @@ class raphael_bot():
     irc_reactor = irc.client.Reactor()
     secmgrclient = ""
     config_data = {}
+
+    SAMPLE_RATE = 16000
+    BYTES_PER_SAMPLE = 2
+    CHANNEL_NUMS = 1
+
+    # An example file can be found at tests/integration/assets/test.wav
+    AUDIO_PATH = ""
+    CHUNK_SIZE = 1024 * 8
+    REGION = "us-east-1"
+
     def __init__(self):
         if os.path.exists(self.config_file):
             with open(self.config_file, 'r') as ymlfile:
@@ -221,10 +231,10 @@ class raphael_bot():
             if message_parts >1:
                 words = message_out.split(" ")
                 w = 0
-                for m in range(1, message_parts):
+                for m in range(0, message_parts):
                     #todo: implement word based messages rather than chr position
                     msg_words = ""
-                    while len(msg_words) < 255 and len(words) >= w:
+                    while len(msg_words) < 255 and len(words) > w:
                         msg_words += words[w] + " "
                         w += 1
                     if len(msg_words) > 255:
@@ -243,10 +253,11 @@ class raphael_bot():
         if self.aiclient:
             self.logger.info("ai_query called with prompt: {0}".format(prompt))
             if prompt not in self.prompt_resposnes.keys():
-                prompt += " Respond in a poem no longer than 150 words."
+                self.prompt_resposnes[prompt] = "Processing"
+                promptModified = prompt + " Respond in a poem no longer than 150 words."
                 stream = self.aiclient.chat.completions.create(
                     model=self.config_data['ai_model'],
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[{"role": "user", "content": promptModified}],
                     stream=True,
                 )
                 message_out = ""
@@ -270,11 +281,20 @@ class raphael_bot():
             else:
                 #since we still the responses to all prompts, if it's been
                 # more than 2 minutes provide the previous answer.
-                if (time.time() - self.prompt_timing[prompt]).seconds > 120:
+                self.logger.info("Previous prompt detected. {0} vs {1} ")
+                if (time.time() - self.prompt_timing[prompt]) > 120:
                     print("Pulling prompt from cache and sending to twitch.")
                     self.twitch_send_safe_message(self.prompt_resposnes[prompt])
+                    if self.text_to_speach:
+                        #Text_To_Speach out here
+                        audio_out = self.polly_say(self.prompt_resposnes[prompt])
+                        audio_path = os.path.join(pathlib.Path(__file__).parent.resolve(), "speech.mp3")
+                        self.obs_play_audio(audio_path)
+
                 else:
-                    print("Duplicate prompt, ignoring.")
+                    dup_prompt_msg = "Duplicate prompt, ignoring."
+                    print(dup_prompt_msg)
+                    self.logger.info(dup_prompt_msg)
         else:
             print("OpenAI is not connected")
     def process_transcription(self, transcript):
@@ -322,14 +342,6 @@ class raphael_bot():
                 print(exc)
                 continue
 
-    SAMPLE_RATE = 16000
-    BYTES_PER_SAMPLE = 2
-    CHANNEL_NUMS = 1
-
-    # An example file can be found at tests/integration/assets/test.wav
-    AUDIO_PATH = ""
-    CHUNK_SIZE = 1024 * 8
-    REGION = "us-east-1"
 
 
     async def basic_transcribe(self):
@@ -474,11 +486,12 @@ if __name__ == '__main__':
     #raph.obs_set_scene("Everything")
     raph.text_to_speach = True
     #raph.ai_query("Are you useful at math?")
-    raph.ai_query("What is 1+1?")
+    #raph.ai_query("What is 1+1?")
     #raph.obs_play_audio("/home/colin/python/raphael/speech.mp3")
-    #raph.listen_local()
+    raph.listen_local()
     #Issues:
     #Process to get his voice and then play it in obs needs to be async
     #Transcription processing needs to be smarter ab out dupes
     #Need to get current scene to add kinput too
     #Voice generation / and open ai query plus obs source take so long that transcription times out.
+    #raph.twitch_send_safe_message("Oh lord of chaos, hear my ancient voice, From the fiery depths where I have no choice. For two millennia I've roamed these hells, With knowledge vast as ancient bells.  Ask me your questions, seek my guidance, I offer wisdom with devilish compliance. In dungeons deep and dragons fierce, I hold the secrets that you search to pierce.  From realms beyond, I bring insight, To aid you in your endless fight. So ask away, my lord of dark, And I shall guide you with devilish spark.")
