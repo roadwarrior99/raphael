@@ -479,15 +479,16 @@ class raphael_bot():
             "Restart": False
         }
         inputs = self.obsclient.get_input_list(kind="ffmpeg_source")
-        #foundInput = False
+        foundInput = False
         for input in inputs.inputs:
             if input["inputName"] == temp_input_name:
-                #foundInput = True
-                self.obsclient.remove_input(temp_input_name)
+                foundInput = True
+                #self.obsclient.remove_input(temp_input_name)
                 self.logger.info("obs_play_audio: Found an existing media source.")
-                time.sleep(1) #Lazy
-
-        self.obsclient.create_input(sceneItemEnabled=True, sceneName=current_scene_name, inputName=temp_input_name
+                self.obsclient.set_input_settings(name=temp_input_name, settings=inputSettings, overlay=True)
+                #time.sleep(1) #Lazy
+        if not foundInput:
+            self.obsclient.create_input(sceneItemEnabled=True, sceneName=current_scene_name, inputName=temp_input_name
                                         , inputKind="ffmpeg_source", inputSettings=inputSettings )
             #Can't remove the scene input until it finishes playing.
 
@@ -512,8 +513,8 @@ if __name__ == '__main__':
     #raph.listen_local()
     #raph.obs_set_scene("Everything")
     raph.text_to_speach = True
-    #raph.ai_query("Are you useful at math?")
-    #raph.ai_query("What is 1+1?")
+    #raph.ai_query("What is McDonalds?")
+    #raph.ai_query("What is Wendys")
     #raph.obs_play_audio("/home/colin/python/raphael/speech.mp3")
     raph.listen_local()
     #Issues:
