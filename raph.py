@@ -520,6 +520,8 @@ if __name__ == '__main__':
     #Issues:
     #Process to get his voice and then play it in obs needs to be async
     #Transcription processing needs to be smarter ab out dupes
-    #Need to get current scene to add kinput too
+    #Need to get current scene to add kinput to:o
     #Voice generation / and open ai query plus obs source take so long that transcription times out.
     #raph.twitch_send_safe_message("Oh lord of chaos, hear my ancient voice, From the fiery depths where I have no choice. For two millennia I've roamed these hells, With knowledge vast as ancient bells.  Ask me your questions, seek my guidance, I offer wisdom with devilish compliance. In dungeons deep and dragons fierce, I hold the secrets that you search to pierce.  From realms beyond, I bring insight, To aid you in your endless fight. So ask away, my lord of dark, And I shall guide you with devilish spark.")
+
+
