@@ -254,7 +254,7 @@ class raphael_bot():
             self.logger.info("ai_query called with prompt: {0}".format(prompt))
             if prompt not in self.prompt_resposnes.keys():
                 self.prompt_resposnes[prompt] = "Processing"
-                promptModified = prompt + " Respond in a poem no longer than 150 words."
+                promptModified = prompt + " " + self.config_data["ai_prompt_postfix"]
                 stream = self.aiclient.chat.completions.create(
                     model=self.config_data['ai_model'],
                     messages=[{"role": "user", "content": promptModified}],
