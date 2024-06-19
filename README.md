@@ -36,6 +36,14 @@ The following key / values pairs will need to be manually created in a secret ca
 - OpenAIProjectID
 - ObsStudioServerKey
 
+# Local Raphael Configuration
+## config.yml should be have all user configurable settings for raphael.
+
+### Change these settings to your Twitch user name:
+- twitch_irc_channel (Where Raphael should respond to questions)
+- twitch_channel_url (Left over from when we were trying to pull audio from twitch rather than lcoal)
+
+
 # Running Raphael
 (from your venv activated project folder)
 python3 raph.py
