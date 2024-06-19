@@ -281,7 +281,8 @@ class raphael_bot():
             else:
                 #since we still the responses to all prompts, if it's been
                 # more than 2 minutes provide the previous answer.
-                self.logger.info("Previous prompt detected. {0} vs {1} ")
+                self.logger.info("Previous prompt detected with time. {0} vs {1} ".format(
+                    str(time.time()),str(self.prompt_timing[prompt])))
                 if (time.time() - self.prompt_timing[prompt]) > 120:
                     print("Pulling prompt from cache and sending to twitch.")
                     self.twitch_send_safe_message(self.prompt_resposnes[prompt])
@@ -297,11 +298,30 @@ class raphael_bot():
                     self.logger.info(dup_prompt_msg)
         else:
             print("OpenAI is not connected")
+
+
+    def compare_prompt_likeness(self, promptPrev, promptCur):
+        if promptPrev in promptCur:
+            promptPrev_len = len(promptPrev)
+            promptCur_len = len(promptCur)
+            if promptPrev_len > promptCur_len:
+                promptDiff = promptCur_len - promptPrev_len
+                pctChange = promptPrev_len/promptCur_len
+                return pctChange
+            else:
+                if promptPrev_len == promptCur_len:
+                    return 1
+                else:
+                    return 0
+        else:
+            return 0
     def process_transcription(self, transcript):
         if transcript: #way to chatty when it comes to sending messages to open AI
             # NEed to figure out a way to wait longer for transcription to finish.
             self.logger.info("process_transcription: " + transcript)
-            if "." in transcript or "?" in transcript:
+            word_count = len(transcript.split(" "))
+            last_charecter = transcript[-1]
+            if "." in transcript or "?" in transcript and word_count >= 5 and last_charecter in ['.', '?']:
                 print(transcript)
                 #self.transcript_stack.append(transcript)
 
@@ -309,7 +329,14 @@ class raphael_bot():
                     print(self.config_data["command_bot_name"] + " heard it's name.")
                     #self.transcript_stack.pop()
                     #self.transcript_stack.pop()
-                    self.ai_query(transcript)
+                    if self.last_ai_prompt:
+                        likeness = self.compare_prompt_likeness(self.last_ai_prompt, transcript)
+                        prv_prt_lk = "Previous prompt likeness: " + str(likeness)
+                        print(prv_prt_lk)
+                        self.logger.info(prv_prt_lk)
+                        if likeness > .8:
+                            self.ai_query(transcript)
+                    self.last_ai_prompt = transcript
                 else:
                     for cmd in self.config_data["command_keywords"]:
                         if cmd in transcript:
