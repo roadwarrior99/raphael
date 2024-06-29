@@ -3,12 +3,10 @@ import os.path
 import irc.client
 import irc.connection
 import sys
-import asyncio
 import pathlib
 from io import BytesIO
 import numpy as np
 from openai import OpenAI
-import whisper
 import datetime
 import functools
 import obsws_python as obs
@@ -19,8 +17,6 @@ import yaml
 import time
 from twitchrealtimehandler import (TwitchAudioGrabber, TwitchImageGrabber)
 import ssl
-import requests
-from fake_useragent import UserAgent
 from pydub import AudioSegment
 from pydub.exceptions import CouldntEncodeError
 import asyncio
@@ -517,6 +513,8 @@ if __name__ == '__main__':
     #raph.ai_query("What is Wendys")
     #raph.obs_play_audio("/home/colin/python/raphael/speech.mp3")
     raph.listen_local()
+    #transcript_canned = "Scene full screen."
+    #raph.process_transcription(transcript_canned)
     #Issues:
     #Process to get his voice and then play it in obs needs to be async
     #Transcription processing needs to be smarter ab out dupes
