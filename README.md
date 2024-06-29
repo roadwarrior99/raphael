@@ -1,7 +1,7 @@
-# Raphael Twitch bot
+ # Raphael Twitch bot
 
 ### Use venv to create a python virtual environment for Raphael to live in.
-
+### On windows systems you can run win-setup.bat to setup venv and add the required packages.
 
 ### The following packages should be installed with: pip3 install
 - boto3
