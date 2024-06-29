@@ -79,7 +79,7 @@ class raphael_bot():
                 self.twitchServer = self.config_data['twitch_irc_server']
                 self.logger.info("Twitch Server: {0}".format(self.twitchServer))
         self.secmgrclient = boto3.client('secretsmanager', region_name=self.config_data['aws_region_id'])
-        self.tran_cleint = boto3.client('transcribe')
+        self.tran_cleint = boto3.client('transcribe', region_name=self.config_data['aws_region_id'])
         secResponse = self.secmgrclient.get_secret_value(SecretId=self.config_data['aws_secret_id'])
         self.logger.info("AWS Secrets manager response: {0}".format(secResponse["ResponseMetadata"]["HTTPStatusCode"]))
         if secResponse['SecretString']:
