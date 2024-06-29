@@ -3,14 +3,22 @@
 ### Use venv to create a python virtual environment for Raphael to live in.
 ### On windows systems you can run win-setup.bat to setup venv and add the required packages.
 
+### The following stand alone programs are dependencies
+- Python3
+- ffmpeg
+- amazon.awscli
 ### The following packages should be installed with: pip3 install
-- boto3
-- pyyaml
-- irc
-- numpy
-- obsws_python
-- sounddevice
-- pydub
+- pip3 install boto3
+- pip3 install irc
+- pip3 install numpy
+- pip3 install openai
+- pip3 install obsws_python
+- pip3 install sounddevice
+- pip3 install pyyaml
+- pip3 install twitchrealtimehandler
+- pip3 install pydub
+- pip3 install aiofile
+- pip3 install amazon_transcribe
 
 Other packages may currently be referenced but unused.
 
