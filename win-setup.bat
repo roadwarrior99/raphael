@@ -8,7 +8,7 @@ winget install amazon.awscli
 :: Setup a python virtual environment for the local system for raph
 python3 -m venv %cd%
 :: Launch the virtual python enviornment
-Scripts\activate.bat
+call Scripts\activate.bat
 #Install dependecies
 pip3 install boto3
 pip3 install irc

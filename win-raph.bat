@@ -1,2 +1,2 @@
-Scripts\activate.bat
-python3 raph.py
+call Scripts\activate.bat 
+python raph.py
