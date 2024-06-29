@@ -1,0 +1,29 @@
+---
+log_filename_format: "%Y-%m-%d_%H-%M-%S"
+log_format: "'%(asctime)s: %(name)s: %(message)s'"
+twitch_irc_server: "irc.chat.twitch.tv"
+twitch_irc_port: 6697
+twitch_channel_url: "https://www.twitch.tv/road_warrior99"
+twitch_irc_channel: "#road_warrior99"
+twitch_bot_response_prefix: "Raphael_bot: "
+aws_region_id: "us-east-1"
+aws_secret_id: "raphael-bot"
+aws_language_code: "en-US"
+aws_polly_engine: "generative" # 'standard'|'neural'|'long-form'|'generative'
+aws_polly_voice: "Matthew" #'Aditi'|'Amy'|'Astrid'|'Bianca'|'Brian'|'Camila'|'Carla'|'Carmen'|'Celine'|'Chantal'|'Conchita'|'Cristiano'|'Dora'|'Emma'|'Enrique'|'Ewa'|'Filiz'|'Gabrielle'|'Geraint'|'Giorgio'|'Gwyneth'|'Hans'|'Ines'|'Ivy'|'Jacek'|'Jan'|'Joanna'|'Joey'|'Justin'|'Karl'|'Kendra'|'Kevin'|'Kimberly'|'Lea'|'Liv'|'Lotte'|'Lucia'|'Lupe'|'Mads'|'Maja'|'Marlene'|'Mathieu'|'Matthew'|'Maxim'|'Mia'|'Miguel'|'Mizuki'|'Naja'|'Nicole'|'Olivia'|'Penelope'|'Raveena'|'Ricardo'|'Ruben'|'Russell'|'Salli'|'Seoyeon'|'Takumi'|'Tatyana'|'Vicki'|'Vitoria'|'Zeina'|'Zhiyu'|'Aria'|'Ayanda'|'Arlet'|'Hannah'|'Arthur'|'Daniel'|'Liam'|'Pedro'|'Kajal'|'Hiujin'|'Laura'|'Elin'|'Ida'|'Suvi'|'Ola'|'Hala'|'Andres'|'Sergio'|'Remi'|'Adriano'|'Thiago'|'Ruth'|'Stephen'|'Kazuha'|'Tomoko'|'Niamh'|'Sofie'|'Lisa'|'Isabelle'|'Zayd'|'Danielle'|'Gregory'|'Burcu'
+ai_setup_prompt_file: "raphael-prompt.txt" # this file willi be fed to chatgpt at launch.
+ai_model: "gpt-3.5-turbo"
+ai_prompt_postfix: "Respond in less than 30 words."
+obs_studio_host: "localhost"
+obs_studio_port: "4455"
+command_bot_name: "Rafael" #"Raphael" AWS can't spell
+command_keywords: #not yet working
+  - Block
+  - Mute
+  - Kick
+  - Scene
+obs_scene_keywords: #not yet working
+  "Everything": "Scene full screen."
+  "Development and Browser": "Scene split screen"
+  "Pycharm": "Scene development"
+  "BRB": "Scene be right back."

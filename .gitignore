@@ -1,0 +1,8 @@
+.idea/
+*.log
+__pycache__/
+*.mp3
+Lib/
+Scripts/
+share/
+pyvenv.cfg
