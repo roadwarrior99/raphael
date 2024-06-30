@@ -20,7 +20,7 @@ obs_studio_port: "4455"
 obs_closed_caption: true
 command_bot_name: "Rafael" #"Raphael" AWS can't spell
 command_keywords: #command keywords to listen for.
-  - Mute
+  - Seen
   - Scene
 obs_scene_keywords: #format Scene Name: What to listen for.
   #  Edit these to match your scenes and what to listen for to switch to that scene

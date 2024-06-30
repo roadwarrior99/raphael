@@ -331,7 +331,7 @@ class raphael_bot():
                         if cmd in transcript:
                             self.command += " " + transcript
                             print("Found Command " + cmd)
-                            if cmd == "Scene":
+                            if cmd == "Scene" or cmd == "Seen":
                                 for scene_name, scene_keywords in self.config_data["obs_scene_keywords"].items():
                                     if scene_keywords in transcript:
                                         print("Switching to scene " + scene_name)
