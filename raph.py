@@ -104,8 +104,11 @@ class raphael_bot():
                 for obj in scenesObj:
                     scenes[obj['sceneName']] = obj['sceneIndex']
                 self.obs_scene_list = scenes
-                print("Available Scenes")
-                print(self.obs_scene_list.keys())
+                #print("Available Scenes")
+                #print(self.obs_scene_list.keys())
+                self.logger.info("obs_get_scenes: {0} current scene: {1}".format(
+                     str(self.obs_scene_list), sceneList.current_program_scene_name
+                ))
                 return sceneList.current_program_scene_name
             except KeyboardInterrupt:
                 pass
