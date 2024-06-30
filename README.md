@@ -50,7 +50,7 @@ The following key / values pairs will need to be manually created in a secret ca
 ### Change these settings to your Twitch user name:
 - twitch_irc_channel (Where Raphael should respond to questions)
 - twitch_channel_url (Left over from when we were trying to pull audio from twitch rather than lcoal)
-
+- obs_scene_keywords "Scene Name": "What to listen for"
 
 # Running Raphael
 - From Windows, in your Raphael folder run win-run.bat
