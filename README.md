@@ -10,13 +10,10 @@
 ### The following packages should be installed with: pip3 install
 - pip3 install boto3
 - pip3 install irc
-- pip3 install numpy
 - pip3 install openai
 - pip3 install obsws_python
 - pip3 install sounddevice
 - pip3 install pyyaml
-- pip3 install twitchrealtimehandler
-- pip3 install pydub
 - pip3 install aiofile
 - pip3 install amazon_transcribe
 
