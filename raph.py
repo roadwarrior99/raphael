@@ -23,7 +23,7 @@ import argparse
 
 
 class raphael_bot():
-    config_file = "config.yml"
+    config_file = ""
     twitchChatCon = ""
     tran_cleint = ""
     twitchServer = "irc.chat.twitch.tv"
@@ -48,7 +48,8 @@ class raphael_bot():
     config_data = {}
 
 
-    def __init__(self):
+    def __init__(self, configFile="config.yml"):
+        self.config_file = configFile
         if os.path.exists(self.config_file):
             with open(self.config_file, 'r') as ymlfile:
                 self.config_data = yaml.safe_load(ymlfile)
@@ -505,7 +506,7 @@ if __name__ == '__main__':
     parser.add_argument('--obs_scenes', help="Query OBS the the list of available Scenes.")
     parser.add_argument('--obs_play', type=str, help="Make OBS play the audio file you specify.")
     args = parser.parse_args()
-    raph = raphael_bot()
+    raph = raphael_bot(args.config)
     if args.twitch:
         raph.sendTwitchMessage(args.twitch)
     if args.obs_scenes:
@@ -518,4 +519,7 @@ if __name__ == '__main__':
     if args.pro_trans:
         raph.process_transcription(args.pro_trans)
     if args.listen:
+        raph.listen_local()
+    if len(sys.argv)==1:
+        # Default if no parameters are provided
         raph.listen_local()
