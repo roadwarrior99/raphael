@@ -136,7 +136,7 @@ class raphael_bot():
         self.twitchChatCon.privmsg(self.twitchChannel, "Raphael is listening from the hell.")
         self.main_irc_loop(con)
 
-    def polly_say(self, text_to_speach):
+    def polly_say(self, text_to_speach, temp_file="speach.mp3"):
         if self.pollyclient:
             self.logger.info("Started polly_say")
             response = self.pollyclient.synthesize_speech(
@@ -150,9 +150,9 @@ class raphael_bot():
                 )
             self.logger.info("Ended polly_say request: " + str(response["ResponseMetadata"]["HTTPStatusCode"]))
             # temp write to a file for debuging
-            if os.path.exists("speach.mp3"):
-                os.remove("speach.mp3")
-            file = open('speech.mp3', 'wb')
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            file = open(temp_file, 'wb')
             file.write(response['AudioStream'].read())
             file.close()
             self.logger.info("polly_say: Finished writing mp3 file.")
@@ -504,7 +504,7 @@ if __name__ == '__main__':
     parser.add_argument('--config', type=str, default="config.yml",
                         help="Use this option to pass in a different configuration file.")
     parser.add_argument('--aiquery', type=str, help="Send a prompt to ChatGPT")
-    parser.add_argument('--polly', type=str, help="Send text to aws polly and get back an mp3 specified")
+    parser.add_argument('--polly', type=str, help="Send text to aws polly and get back an mp3 called polly-test.mp3")
     parser.add_argument('--listen', help="Start Raphael bot and listen to the local mic.")
     parser.add_argument('--pro_trans', type=str, help="Pass the input to the process transcription function to test voice command processing.")
     parser.add_argument('--twitch', type=str, help="Send the input to twtich chat.")
@@ -524,6 +524,8 @@ if __name__ == '__main__':
         raph.obs_play_audio(args.obs_play)
     if args.pro_trans:
         raph.process_transcription(args.pro_trans)
+    if args.polly:
+        raph.polly_say(args.polly, "polly-test.mp3")
     if args.obs_cc:
         raph.obs_closed_caption(args.obs_cc)
     if args.listen:

@@ -1,23 +1,24 @@
  # Raphael Twitch bot
 
-### Use venv to create a python virtual environment for Raphael to live in.
-### On windows systems you can run win-setup.bat to setup venv and add the required packages.
-
+### Setting Up Raphael Bot
+### Copy raphaels files to a folder of your choosing.
+- On windows systems you can run win-setup.bat to setup venv and add the required packages. This is assuming that winget is available from the command line for automated dependency installation. Tested on windows 11.
+- On Mac os you can run the bash script mac-setup.sh
+- On Ubuntu you can use ubuntu-setup.sh
 ### The following stand alone programs are dependencies
 - Python3
 - ffmpeg
 - amazon.awscli
-### The following packages should be installed with: pip3 install
-- pip3 install boto3
-- pip3 install irc
-- pip3 install openai
-- pip3 install obsws_python
-- pip3 install sounddevice
-- pip3 install pyyaml
-- pip3 install aiofile
-- pip3 install amazon_transcribe
+### The following packages will be installed to the venv environment:
+- boto3
+- irc
+- openai
+- opbsws_python
+- sounddevice
+- pyyaml
+- aiofile
+- amazon_transcribe
 
-Other packages may currently be referenced but unused.
 
 ### Web Service Integrations
 - OpenAI
@@ -25,6 +26,7 @@ Other packages may currently be referenced but unused.
 - OBS Studio Webhooks
 
 ## AWS Setup
+### It is ideal to create an IAM user for Raphael bot to use with the permissions listed below. No Console access should be given to this user.
 ### AWS CLI User permissions required:
 - AmazonPollyReadOnlyAccess
 - AmazonTranscribeFullAccess
@@ -43,7 +45,7 @@ The following key / values pairs will need to be manually created in a secret ca
 - ObsStudioServerKey
 
 # Local Raphael Configuration
-## config.yml should be have all user configurable settings for raphael.
+## config.yml should have all user configurable settings for raphael.
 
 ### Change these settings to your Twitch user name:
 - twitch_irc_channel (Where Raphael should respond to questions)
@@ -51,5 +53,20 @@ The following key / values pairs will need to be manually created in a secret ca
 
 
 # Running Raphael
-(from your venv activated project folder)
-python3 raph.py
+- From Windows, in your Raphael folder run win-run.bat
+- From Mac OS, in your Raphael folder run mac-run.sh
+- From Ubuntu, in your Raphael folder run nix-run.sh
+
+# Running individual functions of raphael bot.
+python3 raph.py --help
+- -h, --help show available parameters
+- --config (file)  Use this option to pass in a different configuration file. Using your own config file will allow you to do a git pull and get any updates to raphael without loosing any customizations to the configuration file.
+- --aiquery (query text) Send a prompt to ChatGPT
+- --polly (what to say) (file name)  Send text to aws polly and get back an mp3 specified
+- --listen the default action when you launch raphael.
+- --pro_trans Pass the input to the process transcription function to test voice command processing. ex. --pro_trans "Scene everything."
+- --twitch Send the input to twitch chat. Useful for testing the integration.
+- --obs_scenes Get a list of the scenes in obs
+- --obs_play (file) Make OBS play the audio file you specified.
+- --obs_cc (text to put on screen) Make OBS add text to the screen.
+
