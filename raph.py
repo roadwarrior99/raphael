@@ -4,8 +4,6 @@ import irc.client
 import irc.connection
 import sys
 import pathlib
-from io import BytesIO
-import numpy as np
 from openai import OpenAI
 import datetime
 import functools
@@ -15,24 +13,13 @@ import sounddevice
 import logging
 import yaml
 import time
-from twitchrealtimehandler import (TwitchAudioGrabber, TwitchImageGrabber)
 import ssl
-from pydub import AudioSegment
-from pydub.exceptions import CouldntEncodeError
 import asyncio
-
-# This example uses aiofile for asynchronous file reads.
-# It's not a dependency of the project but can be installed
-# with `pip install aiofile`.
-import aiofile
-
 from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
-from amazon_transcribe.utils import apply_realtime_delay
-import itertools
-envfile  = '.' + os.sep + '.env'
 import json
+import argparse
 
 
 class raphael_bot():
@@ -60,20 +47,13 @@ class raphael_bot():
     secmgrclient = ""
     config_data = {}
 
-    SAMPLE_RATE = 16000
-    BYTES_PER_SAMPLE = 2
-    CHANNEL_NUMS = 1
-
-    # An example file can be found at tests/integration/assets/test.wav
-    AUDIO_PATH = ""
-    CHUNK_SIZE = 1024 * 8
-    REGION = "us-east-1"
 
     def __init__(self):
         if os.path.exists(self.config_file):
             with open(self.config_file, 'r') as ymlfile:
                 self.config_data = yaml.safe_load(ymlfile)
                 timeobj = datetime.datetime.now()
+                self.text_to_speach = self.config_data["aws_text_to_speach"]
                 logFileName = "raph_" + timeobj.strftime(self.config_data["log_filename_format"]) + ".log"
                 logging.basicConfig(filename=logFileName, level=logging.INFO, format=self.config_data["log_format"])
                 self.twitchServer = self.config_data['twitch_irc_server']
@@ -104,24 +84,31 @@ class raphael_bot():
             else:
                 print("Problem pulling AWS Secret")
     def obs_connect(self):
-        self.obsclient = obs.ReqClient(host=self.config_data['obs_studio_host'],port=self.config_data['obs_studio_port'],password=self.secrets['ObsStudioServerKey'])
-        version = self.obsclient.get_version()
-        obs_ver_str = "OBS Version:" + version.obs_version
-        print(obs_ver_str)
-        self.logger.info(obs_ver_str)
+        try:
+            self.obsclient = obs.ReqClient(host=self.config_data['obs_studio_host'],port=self.config_data['obs_studio_port'],password=self.secrets['ObsStudioServerKey'])
+            version = self.obsclient.get_version()
+            obs_ver_str = "OBS Version:" + version.obs_version
+            print(obs_ver_str)
+            self.logger.info(obs_ver_str)
+        except Exception as e:
+            print("Problem connecting to obs server: {0}".format(e))
+
 
     def obs_get_scenes(self):
         scenes = dict()
         if self.obsclient:
             try:
-                scenesObj = self.obsclient.get_scene_list().scenes
+                sceneList = self.obsclient.get_scene_list()
+                scenesObj = sceneList.scenes
                 for obj in scenesObj:
                     scenes[obj['sceneName']] = obj['sceneIndex']
                 self.obs_scene_list = scenes
                 print("Available Scenes")
                 print(self.obs_scene_list.keys())
+                return sceneList.current_program_scene_name
             except KeyboardInterrupt:
                 pass
+
 
     def obs_set_scene(self, scene_name):
         if self.obsclient:
@@ -315,6 +302,8 @@ class raphael_bot():
         if transcript: #way to chatty when it comes to sending messages to open AI
             # NEed to figure out a way to wait longer for transcription to finish.
             self.logger.info("process_transcription: " + transcript)
+            if self.config_data["obs_closed_caption"]:
+                self.obs_closed_caption(transcript)
             word_count = len(transcript.split(" "))
             last_charecter = transcript[-1]
             if "." in transcript or "?" in transcript and word_count >= 5 and last_charecter in ['.', '?']:
@@ -405,38 +394,7 @@ class raphael_bot():
                     #print(alt.transcript)
                     self.my_parent.process_transcription(alt.transcript)
     # for twitch streams
-    def listen_to_stream(self, url):
-            audio_grabber = TwitchAudioGrabber(
-                twitch_url=url,
-                blocking=True,  # wait until a segment is available
-                segment_length=2,  # segment length in seconds
-                rate=16000,  # sampling rate of the audio
-                channels=2,  # number of channels
-                dtype=np.int16  # quality of the audio could be [np.int16, np.int32, np.float32, np.float64]
-                )
-            loop = asyncio.get_event_loop()
-           # ua = UserAgent()
-            while True:
-                audio_segment = audio_grabber.grab_raw()
-                if audio_segment:
-                    raw = BytesIO(audio_segment)
-                    with open("temp", "wb") as a:
-                        a.write(audio_segment)
-                    try:
-                        raw_Wav = AudioSegment.from_raw(raw=raw, file="temp", sample_width=2, frame_rate=16000, channels=1)
-                    except CouldntEncodeError:
-                        print("Could not decode audio")
-                        continue
-                    raw_flac = BytesIO()
-                    raw_Wav.export(raw_flac, format="flac")#broken
-                    data = raw_flac.read()
-                    #transcript = self.api_speach(data, ua)
-                    with open("temp2","wb") as a:
-                        a.write(data)
 
-                    loop.run_until_complete(self.basic_transcribe("temp2"))
-                    #loop.close()
-                    #self.basic_transcribe("temp2")
 
     async def mic_stream(self):
         # This function wraps the raw input stream from the microphone forwarding
@@ -464,62 +422,100 @@ class raphael_bot():
                 indata, status = await input_queue.get()
                 yield indata, status
     def obs_play_audio(self, audio):
-        #TODO get current scene
-        self.logger.info("Started: obs_play_audio")
-        current_scene_name = "Development and Browser"
-        temp_input_name = "Raphael_vo"
-        inputSettings= {
-            "visible" : True,
-            "LocalFile" : True,
-            "local_file" : audio,
-            "Restart": False
-        }
-        inputs = self.obsclient.get_input_list(kind="ffmpeg_source")
-        foundInput = False
-        for input in inputs.inputs:
-            if input["inputName"] == temp_input_name:
-                foundInput = True
-                #self.obsclient.remove_input(temp_input_name)
-                self.logger.info("obs_play_audio: Found an existing media source.")
-                self.obsclient.set_input_settings(name=temp_input_name, settings=inputSettings, overlay=True)
-                #time.sleep(1) #Lazy
-        if not foundInput:
-            self.obsclient.create_input(sceneItemEnabled=True, sceneName=current_scene_name, inputName=temp_input_name
-                                        , inputKind="ffmpeg_source", inputSettings=inputSettings )
-            #Can't remove the scene input until it finishes playing.
+        if self.obsclient:
+            self.logger.info("Started: obs_play_audio")
+            current_scene_name = self.obs_get_scenes()
+            temp_input_name = "Raphael_vo"
+            inputSettings= {
+                "visible" : True,
+                "LocalFile" : True,
+                "local_file" : audio,
+                "Restart": False
+            }
+            inputs = self.obsclient.get_input_list(kind="ffmpeg_source")
+            foundInput = False
+            for input in inputs.inputs:
+                if input["inputName"] == temp_input_name:
+                    foundInput = True
+                    #self.obsclient.remove_input(temp_input_name)
+                    self.logger.info("obs_play_audio: Found an existing media source.")
+                    self.obsclient.set_input_settings(name=temp_input_name, settings=inputSettings, overlay=True)
+                    #time.sleep(1) #Lazy
+            if not foundInput:
+                self.obsclient.create_input(sceneItemEnabled=True, sceneName=current_scene_name, inputName=temp_input_name
+                                            , inputKind="ffmpeg_source", inputSettings=inputSettings )
+                #Can't remove the scene input until it finishes playing.
 
-            #The file name will not change, so just play the source.
-        #self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP")
-            #Maybe if we stop it, it will clear the cache
-        self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART")
-        self.logger.info("obs_play_audio finished calling obs.")
-        #How do we know when the source input has finished playing?
-        #self.obsclient.remove_input(temp_input_name)
+                #The file name will not change, so just play the source.
+            #self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP")
+                #Maybe if we stop it, it will clear the cache
+            self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART")
+            self.logger.info("obs_play_audio finished calling obs.")
+            #How do we know when the source input has finished playing?
+            #self.obsclient.remove_input(temp_input_name)
+        else:
+            self.logger.info("obs_play_audio called while obs was not running.")
+    def obs_closed_caption(self, caption):
+        if self.obsclient:
+            self.logger.info("Started: obs_closed_caption")
+            current_scene_name = self.obs_get_scenes()
+            temp_input_name = "Raphael_cc"
+            inputSettings= {
+                "visible" : True,
+                "pos": {"x": 190, "y": 840},
+                "scale": {"x": 0.16, "y": 0.16},
+                "text": caption,
+                "rot": 0
+            }
+            inputs = self.obsclient.get_input_list(kind="text_ft2_source")
+            foundInput = False
+            for input in inputs.inputs:
+                if input["inputName"] == temp_input_name:
+                    foundInput = True
+                    #self.obsclient.remove_input(temp_input_name)
+                    self.logger.info("obs_closed_caption: Found an existing media source.")
+                    self.obsclient.set_input_settings(name=temp_input_name, settings=inputSettings, overlay=True)
+                    #time.sleep(1) #Lazy
+            if not foundInput:
+                self.obsclient.create_scene_item
+                self.obsclient.create_input(sceneItemEnabled=True, sceneName=current_scene_name, inputName=temp_input_name
+                                            , inputKind="text_ft2_source", inputSettings=inputSettings )
+                #Can't remove the scene input until it finishes playing.
+
+                #The file name will not change, so just play the source.
+            #self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP")
+                #Maybe if we stop it, it will clear the cache
+            #self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART")
+            self.logger.info("obs_closed_caption finished calling obs.")
     def listen_local(self):
         loop = asyncio.get_event_loop()
         print("Listening to local Mic")
         loop.run_until_complete(self.basic_transcribe())
         loop.close()
+
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default="config.yml",
+                        help="Use this option to pass in a different configuration file.")
+    parser.add_argument('--aiquery', type=str, help="Send a prompt to ChatGPT")
+    parser.add_argument('--polly', type=str, help="Send text to aws polly and get back an mp3 specified")
+    parser.add_argument('--listen', help="Start Raphael bot and listen to the local mic.")
+    parser.add_argument('--pro_trans', type=str, help="Pass the input to the process transcription function to test voice command processing.")
+    parser.add_argument('--twitch', type=str, help="Send the input to twtich chat.")
+    parser.add_argument('--obs_scenes', help="Query OBS the the list of available Scenes.")
+    parser.add_argument('--obs_play', type=str, help="Make OBS play the audio file you specify.")
+    args = parser.parse_args()
     raph = raphael_bot()
-    #raph.sendTwitchMessage("Starting questions for Raphael...")
-    #raph.ai_query("Raphael please tell me about the first of the seven hells in DnD.")
-    #test_url = "https://www.twitch.tv/road_warrior99"
-    #audio_segment = raph.listen_to_stream(test_url)
-    #raph.listen_local()
-    #raph.obs_set_scene("Everything")
-    raph.text_to_speach = True
-    #raph.ai_query("What is McDonalds?")
-    #raph.ai_query("What is Wendys")
-    #raph.obs_play_audio("/home/colin/python/raphael/speech.mp3")
-    raph.listen_local()
-    #transcript_canned = "Scene full screen."
-    #raph.process_transcription(transcript_canned)
-    #Issues:
-    #Process to get his voice and then play it in obs needs to be async
-    #Transcription processing needs to be smarter ab out dupes
-    #Need to get current scene to add kinput to:o
-    #Voice generation / and open ai query plus obs source take so long that transcription times out.
-    #raph.twitch_send_safe_message("Oh lord of chaos, hear my ancient voice, From the fiery depths where I have no choice. For two millennia I've roamed these hells, With knowledge vast as ancient bells.  Ask me your questions, seek my guidance, I offer wisdom with devilish compliance. In dungeons deep and dragons fierce, I hold the secrets that you search to pierce.  From realms beyond, I bring insight, To aid you in your endless fight. So ask away, my lord of dark, And I shall guide you with devilish spark.")
-
-
+    if args.twitch:
+        raph.sendTwitchMessage(args.twitch)
+    if args.obs_scenes:
+        current_scene = raph.obs_get_scenes()
+        print("Current Scene: {0}".format(current_scene))
+    if args.aiquery:
+        raph.ai_query(args.aiquery)
+    if args.obs_play:
+        raph.obs_play_audio(args.obs_play)
+    if args.pro_trans:
+        raph.process_transcription(args.pro_trans)
+    if args.listen:
+        raph.listen_local()
