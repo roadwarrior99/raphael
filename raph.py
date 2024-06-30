@@ -462,13 +462,20 @@ class raphael_bot():
             current_scene_name = self.obs_get_scenes()
             temp_input_name = "Raphael_cc"
             inputSettings= {
+                "text": caption,
+            }
+            itemProperties = {
                 "visible" : True,
                 "pos": {"x": 190, "y": 840},
                 "scale": {"x": 0.16, "y": 0.16},
-                "text": caption,
                 "rot": 0
             }
-            inputs = self.obsclient.get_input_list(kind="text_ft2_source")
+            #Text objects have two parts. A source with the primary ID.
+            # and an settings/items/item on the scene iteself with source_uuid
+            #sources/scenes/items/
+            #sources/settings/items
+            textinputtype = "text_ft2_source_v2"
+            inputs = self.obsclient.get_input_list(kind=textinputtype)
             foundInput = False
             for input in inputs.inputs:
                 if input["inputName"] == temp_input_name:
@@ -476,17 +483,12 @@ class raphael_bot():
                     #self.obsclient.remove_input(temp_input_name)
                     self.logger.info("obs_closed_caption: Found an existing media source.")
                     self.obsclient.set_input_settings(name=temp_input_name, settings=inputSettings, overlay=True)
-                    #time.sleep(1) #Lazy
+                    #sceneObj = self.obsclient.get_current_program_scene()
+                    #sceneObj.settings.items[3]
             if not foundInput:
                 self.obsclient.create_scene_item
                 self.obsclient.create_input(sceneItemEnabled=True, sceneName=current_scene_name, inputName=temp_input_name
-                                            , inputKind="text_ft2_source", inputSettings=inputSettings )
-                #Can't remove the scene input until it finishes playing.
-
-                #The file name will not change, so just play the source.
-            #self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_STOP")
-                #Maybe if we stop it, it will clear the cache
-            #self.obsclient.trigger_media_input_action(temp_input_name, "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART")
+                                            , inputKind=textinputtype, inputSettings=inputSettings)
             self.logger.info("obs_closed_caption finished calling obs.")
     def listen_local(self):
         loop = asyncio.get_event_loop()
@@ -505,6 +507,7 @@ if __name__ == '__main__':
     parser.add_argument('--twitch', type=str, help="Send the input to twtich chat.")
     parser.add_argument('--obs_scenes', help="Query OBS the the list of available Scenes.")
     parser.add_argument('--obs_play', type=str, help="Make OBS play the audio file you specify.")
+    parser.add_argument('--obs_cc', type=str, help="Make OBS add text to the screen.")
     args = parser.parse_args()
     raph = raphael_bot(args.config)
     if args.twitch:
@@ -518,6 +521,8 @@ if __name__ == '__main__':
         raph.obs_play_audio(args.obs_play)
     if args.pro_trans:
         raph.process_transcription(args.pro_trans)
+    if args.obs_cc:
+        raph.obs_closed_caption(args.obs_cc)
     if args.listen:
         raph.listen_local()
     if len(sys.argv)==1:
