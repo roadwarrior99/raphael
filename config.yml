@@ -18,7 +18,8 @@ ai_prompt_postfix: "Respond in less than 30 words."
 obs_studio_host: "localhost"
 obs_studio_port: "4455"
 obs_closed_caption: true
-command_bot_name: "Rafael" #"Raphael" AWS can't spell
+command_bot_name: "Raphael" #"Raphael" AWS can't spell
+command_bot_name_alt: "Rafael"
 command_keywords: #command keywords to listen for.
   - Seen
   - Scene

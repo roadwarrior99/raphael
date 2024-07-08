@@ -136,7 +136,7 @@ class raphael_bot():
         self.twitchChatCon.privmsg(self.twitchChannel, "Raphael is listening from the hell.")
         self.main_irc_loop(con)
 
-    def polly_say(self, text_to_speach, temp_file="speach.mp3"):
+    def polly_say(self, text_to_speach, temp_file="speech.mp3"):
         if self.pollyclient:
             self.logger.info("Started polly_say")
             response = self.pollyclient.synthesize_speech(
@@ -314,7 +314,8 @@ class raphael_bot():
                 print(transcript)
                 #self.transcript_stack.append(transcript)
 
-                if self.config_data["command_bot_name"] in transcript:
+                if (self.config_data["command_bot_name"] in transcript
+                        or self.config_data["command_bot_name_alt"] in transcript):
                     print(self.config_data["command_bot_name"] + " heard it's name.")
                     #self.transcript_stack.pop()
                     #self.transcript_stack.pop()
@@ -523,6 +524,7 @@ if __name__ == '__main__':
     if args.obs_play:
         raph.obs_play_audio(args.obs_play)
     if args.pro_trans:
+        raph.process_transcription(args.pro_trans)
         raph.process_transcription(args.pro_trans)
     if args.polly:
         raph.polly_say(args.polly, "polly-test.mp3")
