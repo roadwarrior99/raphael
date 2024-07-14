@@ -23,9 +23,13 @@ command_bot_name_alt: "Rafael"
 command_keywords: #command keywords to listen for.
   - Seen
   - Scene
+  - Switch screen
+  - Switch scene
+  - Switch seen
 obs_scene_keywords: #format Scene Name: What to listen for.
   #  Edit these to match your scenes and what to listen for to switch to that scene
-  "Everything": "Scene full screen."
-  "Development and Browser": "Scene split screen"
-  "Pycharm": "Scene development"
-  "BRB": "Scene be right back."
+  #ACtual scene name on the left, keywords to listen for on the right
+  "Everything": "full screen."
+  "Development and Browser": "split dev"
+  "PyCharm": "development"
+  "BRB": "be right back."

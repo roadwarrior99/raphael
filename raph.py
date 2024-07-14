@@ -56,7 +56,12 @@ class raphael_bot():
                 timeobj = datetime.datetime.now()
                 self.text_to_speach = self.config_data["aws_text_to_speach"]
                 logFileName = "raph_" + timeobj.strftime(self.config_data["log_filename_format"]) + ".log"
+
+
+                #Edit this line to remove logging
                 logging.basicConfig(filename=logFileName, level=logging.INFO, format=self.config_data["log_format"])
+
+
                 self.twitchServer = self.config_data['twitch_irc_server']
                 self.logger.info("Twitch Server: {0}".format(self.twitchServer))
         self.secmgrclient = boto3.client('secretsmanager', region_name=self.config_data['aws_region_id'])
@@ -319,20 +324,21 @@ class raphael_bot():
                     print(self.config_data["command_bot_name"] + " heard it's name.")
                     #self.transcript_stack.pop()
                     #self.transcript_stack.pop()
-                    if self.last_ai_prompt:
-                        likeness = self.compare_prompt_likeness(self.last_ai_prompt, transcript)
-                        prv_prt_lk = "Previous prompt likeness: " + str(likeness)
-                        print(prv_prt_lk)
-                        self.logger.info(prv_prt_lk)
-                        if likeness > .8:
-                            self.ai_query(transcript)
+                    #if self.last_ai_prompt:
+                    #likeness = self.compare_prompt_likeness(self.last_ai_prompt, transcript)
+                    #prv_prt_lk = "Previous prompt likeness: " + str(likeness)
+                    #print(prv_prt_lk)
+                    #self.logger.info(prv_prt_lk)
+                   # if likeness > .6:
+                    self.ai_query(transcript)
                     self.last_ai_prompt = transcript
+
                 else:
                     for cmd in self.config_data["command_keywords"]:
                         if cmd in transcript:
                             self.command += " " + transcript
                             print("Found Command " + cmd)
-                            if cmd == "Scene" or cmd == "Seen":
+                            if "scene" in cmd or "seen" in cmd or "screen" in cmd:
                                 for scene_name, scene_keywords in self.config_data["obs_scene_keywords"].items():
                                     if scene_keywords in transcript:
                                         print("Switching to scene " + scene_name)
