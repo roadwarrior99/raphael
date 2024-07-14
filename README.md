@@ -34,11 +34,12 @@
 - AmazonPollyReadOnlyAccess
 - AmazonTranscribeFullAccess
 - SecretsManagerReadWrite
-#### Access to secrets manager can be restricted to the raphael-bot arn.
+#### Access to secrets manager should be restricted to the raphael-bot arn.
 
 ## No passwords should ever be stored in code or config files with this project.
 ### AWS Secret Manager - secret setup.
 The following key / values pairs will need to be manually created in a secret called "raphael-bot".
+The name of the secret that it looks for is configurable in the config.yml file.
 - TwitchNickName
 - TwitchPassword (oauth, not user)
 - OpenAIUserName
@@ -57,8 +58,8 @@ The following key / values pairs will need to be manually created in a secret ca
 
 # Running Raphael
 - From Windows, in your Raphael folder run win-run.bat
-- From Mac OS, in your Raphael folder run mac-run.sh
-- From Ubuntu, in your Raphael folder run nix-run.sh
+- From Mac OS, in your Raphael folder run sh mac-run.sh
+- From Ubuntu, in your Raphael folder run sh nix-run.sh
 
 # Running individual functions of raphael bot.
 python3 raph.py --help
