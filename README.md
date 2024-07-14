@@ -26,7 +26,7 @@
 - OBS Studio Webhooks
 
 ### Web Service Flow
-![flow chart of 3rd party web service calls](https://pub.cmh.sh/Raphael_Infra-Flow.png)
+![flow chart of 3rd party web service calls](Raphael_Infra-Flow.png)
 
 ## AWS Setup
 ### It is ideal to create an IAM user for Raphael bot to use with the permissions listed below. No Console access should be given to this user.
