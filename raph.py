@@ -533,7 +533,7 @@ if __name__ == '__main__':
         raph.process_transcription(args.pro_trans)
         raph.process_transcription(args.pro_trans)
     if args.polly:
-        raph.polly_say(args.polly, "polly-test.mp3")
+        raph.polly_say(args.polly, args.polly)
     if args.obs_cc:
         raph.obs_closed_caption(args.obs_cc)
     if args.listen:
