@@ -18,6 +18,7 @@ pip3 install sounddevice
 pip3 install pyyaml
 pip3 install aiofile
 pip3 install amazon_transcribe
+pip3 install flask
 :: Launch aws configuration
 aws configure
 

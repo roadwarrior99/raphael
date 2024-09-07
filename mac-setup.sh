@@ -21,5 +21,6 @@ pip3 install obsws_python
 pip3 install sounddevice
 pip3 install pyyaml
 pip3 install aiofile
+pip3 install flask
 pip3 install amazon_transcribe
 aws configure
