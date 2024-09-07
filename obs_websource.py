@@ -10,14 +10,6 @@ my_closed_caption = "Welcome"
 async def index():
     return render_template("index.html")
 
-@app.route("/stream")
-async def stream():
-    def generate():
-        for i in range(500):
-            yield "{}\n".format(sqrt(i))
-            sleep(1)
-    return Response(generate(), mimetype="text/plain")
-
 @app.route("/closed_captions")
 def closed_captions():
     return render_template("closed_captions.html")

@@ -316,16 +316,16 @@ class raphael_bot():
         if transcript: #way to chatty when it comes to sending messages to open AI
             # NEed to figure out a way to wait longer for transcription to finish.
             #TODO: CLEAN THIS UP; parameterize hard server coded values
-            if self.myWebServ_up:
+            if self.config_data["obs_closed_caption"] and self.myWebServ_up:
                 header = {"Content-Type": "application/x-www-form-urlencoded"}
                 data = {"new_caption": transcript}
-                url = "http://localhost:5000/update_closed_caption"
+                url = self.config_data["closed_caption_update_url"]
                 resp = req.post(url=url,data=data, headers=header)
                 if resp.status_code != 200:
                     self.logger.warning("caption url:{0} returned code: {1}".format(url,resp.status_code))
             self.logger.info("process_transcription: " + transcript)
-            if self.config_data["obs_closed_caption"]:
-                self.obs_closed_caption(transcript)
+            #if self.config_data["obs_closed_caption"]:
+                #self.obs_closed_caption(transcript)
             word_count = len(transcript.split(" "))
             last_charecter = transcript[-1]
             if "." in transcript or "?" in transcript and word_count >= 5 and last_charecter in ['.', '?']:
@@ -478,6 +478,9 @@ class raphael_bot():
             #self.obsclient.remove_input(temp_input_name)
         else:
             self.logger.info("obs_play_audio called while obs was not running.")
+
+    #Here only for reference
+    #This is now updated via web source.
     def obs_closed_caption(self, caption):
         if self.obsclient:
             self.logger.info("Started: obs_closed_caption")
@@ -516,7 +519,9 @@ class raphael_bot():
         loop = asyncio.get_event_loop()
         print("Firing of Flask")
 
-        thread1 = threading.Thread(target=lambda: self.myWebServ.run(use_reloader=False, debug=True), args=()).start()
+        thread1 = threading.Thread(target=lambda: self.myWebServ.run(
+            host=self.config_data["flask_host_ip"], port=self.config_data["flask_host_port"],
+            use_reloader=False, debug=True), args=()).start()
         #self.myWebServ.run()
         self.myWebServ_up = True
         print("Listening to local Mic")
@@ -539,7 +544,7 @@ if __name__ == '__main__':
     parser.add_argument('--twitch', type=str, help="Send the input to twtich chat.")
     parser.add_argument('--obs_scenes', help="Query OBS the the list of available Scenes.")
     parser.add_argument('--obs_play', type=str, help="Make OBS play the audio file you specify.")
-    parser.add_argument('--obs_cc', type=str, help="Make OBS add text to the screen.")
+    #parser.add_argument('--obs_cc', type=str, help="Make OBS add text to the screen.")
     args = parser.parse_args()
     raph = raphael_bot(args.config)
     if args.twitch:
@@ -556,8 +561,8 @@ if __name__ == '__main__':
         raph.process_transcription(args.pro_trans)
     if args.polly:
         raph.polly_say(args.polly, args.polly)
-    if args.obs_cc:
-        raph.obs_closed_caption(args.obs_cc)
+    #if args.obs_cc:
+        #raph.obs_closed_caption(args.obs_cc)
     if args.listen:
         raph.listen_local()
     if len(sys.argv)==1:

@@ -17,7 +17,11 @@ ai_model: "gpt-3.5-turbo" # https://platform.openai.com/docs/models/gpt-3-5-turb
 ai_prompt_postfix: "Respond in less than 30 words."
 obs_studio_host: "localhost"
 obs_studio_port: "4455"
-obs_closed_caption: true
+obs_closed_caption: True
+flask_host_ip: "0.0.0.0"
+flask_host_port: 5000
+closed_caption_update_url: "http://localhost:5000/update_closed_caption"
+
 command_bot_name: "Raphael" #"Raphael" AWS can't spell
 command_bot_name_alt: "Rafael"
 command_keywords: #command keywords to listen for.
@@ -33,3 +37,4 @@ obs_scene_keywords: #format Scene Name: What to listen for.
   "Development and Browser": "split dev"
   "PyCharm": "development"
   "BRB": "be right back."
+  "Terminal Magic": "terminal"

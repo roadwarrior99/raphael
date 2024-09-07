@@ -3,6 +3,15 @@
     <title>Welcome to raphael's web source server</title>
 </head>
 <body>
-    <iframe src="{{ url_for('stream') }}" title="closed captions"></iframe>
+    <h1>Getting started</h1>
+    <p>
+        <ol>
+            <li>You will need to add a web source to your OBS Scene.</li>
+            <li>You can customize the css of the captions by targeting the body or by targeting css id closed_caption_block</li>
+            <li>You can congiure the ip and the port that this web server runs on in the raphael config file</li>
+            <li>the closed caption page is {{ url_for('closed_captions') }}</li>
+            <li>the closed caption update page is {{ url_for('update_caption') }}</li>
+        </ol>
+    </p>
 </body>
 </html>
