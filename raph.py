@@ -20,7 +20,9 @@ from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
 import json
 import argparse
-
+import obs_websource
+import threading
+import requests as req
 
 class raphael_bot():
     config_file = ""
@@ -46,7 +48,8 @@ class raphael_bot():
     irc_reactor = irc.client.Reactor()
     secmgrclient = ""
     config_data = {}
-
+    myWebServ = obs_websource.app
+    myWebServ_up = False
 
     def __init__(self, configFile="config.yml"):
         self.config_file = configFile
@@ -87,6 +90,8 @@ class raphael_bot():
                 self.secrets['OpenAIKey'] = "Redacted"
                 self.secrets['ObsStudioServerKey'] = "Redacted"
                 self.logger.info("Passwords redacted from secrets variable.")
+                self.logger.info("Starting flask web server for closed caption feed")
+
             else:
                 print("Problem pulling AWS Secret")
     def obs_connect(self):
@@ -310,6 +315,14 @@ class raphael_bot():
     def process_transcription(self, transcript):
         if transcript: #way to chatty when it comes to sending messages to open AI
             # NEed to figure out a way to wait longer for transcription to finish.
+            #TODO: CLEAN THIS UP; parameterize hard server coded values
+            if self.myWebServ_up:
+                header = {"Content-Type": "application/x-www-form-urlencoded"}
+                data = {"new_caption": transcript}
+                url = "http://localhost:5000/update_closed_caption"
+                resp = req.post(url=url,data=data, headers=header)
+                if resp.status_code != 200:
+                    self.logger.warning("caption url:{0} returned code: {1}".format(url,resp.status_code))
             self.logger.info("process_transcription: " + transcript)
             if self.config_data["obs_closed_caption"]:
                 self.obs_closed_caption(transcript)
@@ -364,7 +377,6 @@ class raphael_bot():
             except Exception as exc:
                 print(exc)
                 continue
-
 
 
     async def basic_transcribe(self):
@@ -502,8 +514,18 @@ class raphael_bot():
             self.logger.info("obs_closed_caption finished calling obs.")
     def listen_local(self):
         loop = asyncio.get_event_loop()
+        print("Firing of Flask")
+
+        thread1 = threading.Thread(target=lambda: self.myWebServ.run(use_reloader=False, debug=True), args=()).start()
+        #self.myWebServ.run()
+        self.myWebServ_up = True
         print("Listening to local Mic")
-        loop.run_until_complete(self.basic_transcribe())
+        thread2 = threading.Thread(loop.run_until_complete(self.basic_transcribe()))
+
+        #loop.run_until_complete(self.basic_transcribe())
+        #loop.run_until_complete(self.launch_flask_server())
+
+
         loop.close()
 
 if __name__ == '__main__':

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome to raphael's closed caption stream hosting page</title>
+</head>
+<body onload="">
+<style>
+    .body {
+        background-color: black;
+        color: white;
+    }
+</style>
+<div id="closed_caption_block"></div>
+<script type="text/javascript">
+    function refresh_caption(){
+        const url = "{{ url_for('caption_service') }}";
+        const caption_div = document.getElementById('closed_caption_block');
+        fetch(url, { headers: { "Content-Type": "application/json; charset=utf-8" }})
+        .then(res => res.json()) // parse response as JSON (can be res.text() for plain response)
+        .then(response => {
+            // here you do what you want with response
+            caption_div.innerText = response["caption"];
+        })
+    .catch(err => {
+        console.log("error");
+    });
+    }
+    window.onload = function() {
+        setInterval(refresh_caption, 200);
+    };
+</script>
+
+</body>
+</html>

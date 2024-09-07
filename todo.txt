@@ -1,0 +1,3 @@
+- Add web source
+- add requirements.txt with a list of python packages to install
+- refactor install scripts to use requirements.txt to cut down on script size?
