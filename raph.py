@@ -517,7 +517,7 @@ class raphael_bot():
             self.logger.info("obs_closed_caption finished calling obs.")
     def listen_local(self):
         loop = asyncio.get_event_loop()
-        print("Firing of Flask")
+        print("Firing off Flask")
 
         thread1 = threading.Thread(target=lambda: self.myWebServ.run(
             host=self.config_data["flask_host_ip"], port=self.config_data["flask_host_port"],

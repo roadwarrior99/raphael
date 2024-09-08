@@ -6,8 +6,9 @@ curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip
 unzip awscliv2.zip
 sudo ./aws/install
 echo "Pre-Reqs installed, now setting up python3 for Raphael"
-python3 -m venv pwd
-. venv/activate
+installpath=$(pwd)
+python3 -m venv "$installpath"
+. bin/activate
 #Install dependencies
 pip3 install boto3
 pip3 install irc
@@ -18,4 +19,5 @@ pip3 install pyyaml
 pip3 install aiofile
 pip3 install amazon_transcribe
 pip3 install flask
+pip3 install requests
 aws configure

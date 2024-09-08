@@ -19,6 +19,7 @@ pip3 install pyyaml
 pip3 install aiofile
 pip3 install amazon_transcribe
 pip3 install flask
+pip3 install requests
 :: Launch aws configuration
 aws configure
 
