@@ -1,0 +1,10 @@
+boto3
+irc
+openai
+obsws_python
+sounddevice
+pyyaml
+aiofile
+amazon_transcribe
+flask
+requests
