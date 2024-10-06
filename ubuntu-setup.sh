@@ -10,14 +10,5 @@ installpath=$(pwd)
 python3 -m venv "$installpath"
 . bin/activate
 #Install dependencies
-pip3 install boto3
-pip3 install irc
-pip3 install openai
-pip3 install obsws_python
-pip3 install sounddevice
-pip3 install pyyaml
-pip3 install aiofile
-pip3 install amazon_transcribe
-pip3 install flask
-pip3 install requests
+pip3 install -r requirements.txt
 aws configure
