@@ -6,5 +6,7 @@ sounddevice
 pyyaml
 aiofile
 amazon_transcribe
-flask
+flask[async]
 requests
+sounddevice
+#sudo apt-get install libportaudio2

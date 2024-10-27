@@ -1,3 +1,5 @@
+from binascii import crc32
+
 import boto3
 import os.path
 import irc.client
@@ -11,6 +13,7 @@ import obsws_python as obs
 import math
 import sounddevice
 import logging
+import zlib
 import yaml
 import time
 import ssl
@@ -166,6 +169,14 @@ class raphael_bot():
             file.write(response['AudioStream'].read())
             file.close()
             self.logger.info("polly_say: Finished writing mp3 file.")
+            response['AudioStream']
+            crc32_value = ""
+            with open(temp_file, 'rb') as f:
+                crc32_value = zlib.crc32(f.read())
+            speach_hash_file = open("{0}.crc".format(temp_file),'w')
+            speach_hash_file.write(str(crc32_value))
+            speach_hash_file.close()
+            self.logger.info("Finished hashing speach.mp3")
             return response['AudioStream']
 
     def irc_on_disconnect(self, connection, event):
@@ -271,7 +282,7 @@ class raphael_bot():
                     #Text_To_Speach out here
                     audio_out = self.polly_say(message_out)
                     audio_path = os.path.join(pathlib.Path(__file__).parent.resolve(), "speech.mp3")
-                    self.obs_play_audio(audio_path)
+                    #self.obs_play_audio(audio_path)
 
                 message_out = self.config_data['twitch_bot_response_prefix'] + message_out
                 self.twitch_send_safe_message(message_out)
@@ -287,7 +298,7 @@ class raphael_bot():
                         #Text_To_Speach out here
                         audio_out = self.polly_say(self.prompt_resposnes[prompt])
                         audio_path = os.path.join(pathlib.Path(__file__).parent.resolve(), "speech.mp3")
-                        self.obs_play_audio(audio_path)
+                        #self.obs_play_audio(audio_path)
 
                 else:
                     dup_prompt_msg = "Duplicate prompt, ignoring."

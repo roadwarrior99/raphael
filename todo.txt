@@ -1,3 +1,4 @@
 
-- refactor install scripts to use requirements.txt to cut down on script size?
 - Investigate advances by openai and 4o
+- Investiagte flask crashes?
+- Investiagte why raph started ignoring me

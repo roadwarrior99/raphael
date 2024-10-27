@@ -8,18 +8,47 @@
     .body {
         background-color: black;
         color: white;
+        font-size: 36pt !important;
     }
+    #closed_caption_block {
+	font-size: 36pt;
+	color: red;
+  	-webkit-text-stroke-color: red;
+	-webkit-text-stroke: 1px red;
+}
 </style>
 <div id="closed_caption_block"></div>
+<div id="raphael_audio_block">
+    <audio id="audio">
+        <source src="{{ url_for('speach') }}" type="audio/mpeg">
+    </audio>
+</div>
 <script type="text/javascript">
+    var speach_hash = "{{ file_hash }}";
+
     function refresh_caption(){
         const url = "{{ url_for('caption_service') }}";
         const caption_div = document.getElementById('closed_caption_block');
+        const audio = document.getElementById('audio');
         fetch(url, { headers: { "Content-Type": "application/json; charset=utf-8" }})
         .then(res => res.json()) // parse response as JSON (can be res.text() for plain response)
         .then(response => {
             // here you do what you want with response
             caption_div.innerText = response["caption"];
+            if(speach_hash != response["speach_hash"] && response["speach_age_seconds"] < 60){
+                if(speach_hash != response["speach_hash"]) {
+                    speach_hash = response["speach_hash"];
+                    //If we haven't done a hash yet,don't freak out.
+                    // only play the audio, if we have hashed it before.
+                    if (speach_hash != "" && audio.paused) {
+                        audio.load();
+                        audio.play();
+                    }
+                }
+            }
+            //check and see if there is a new audio response from raphael.
+            // if the repsonse is less than a minute play the audio...
+            //if we haven't already played it....
         })
     .catch(err => {
         console.log("error");
