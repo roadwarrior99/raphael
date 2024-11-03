@@ -17,15 +17,22 @@ async def index():
 @app.route("/speech")
 def speech():
     global my_speach_file
-    if os.path.exists("/home/colin/PycharmProjects/raphael/speech.mp3"):
-        return send_from_directory("/home/colin/PycharmProjects/raphael/", "speech.mp3", mimetype='audio/mpeg')
+    speech_file_path = os.path.dirname(os.path.realpath(__file__))
+    #print(os.path.join(speech_file_path, my_speach_file))
+    if os.path.exists(os.path.join(speech_file_path, my_speach_file)):
+        resp = send_from_directory(speech_file_path, my_speach_file, mimetype='audio/mpeg')
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+        return resp
     else:
         return "",404
 
 @app.route("/closed_captions")
 def closed_captions():
     file_hash = ""
-    crc_file_path = os.path.dirname(os.path.realpath(__file__)) + "/speech.mp3.crc"
+    global my_speach_file
+    crc_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),my_speach_file + ".crc")
     if os.path.exists(crc_file_path):
         with open(crc_file_path, 'r') as f:
             file_hash = f.readline()
@@ -33,12 +40,13 @@ def closed_captions():
 @app.route("/closed_service")
 def caption_service():
     global my_closed_caption
+    global my_speach_file
     file_hash = ""
-    crc_file_path = "/home/colin/PycharmProjects/raphael/speech.mp3.crc"
+    crc_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),my_speach_file + ".crc")
     if os.path.exists(crc_file_path):
         with open(crc_file_path, 'r') as f:
             file_hash = f.readline()
-    timestamp = os.path.getmtime("speech.mp3")
+    timestamp = os.path.getmtime(my_speach_file)
     filetime = datetime.datetime.fromtimestamp(timestamp)
     nowtime = datetime.datetime.now()
     how_old_is_the_file = (nowtime - filetime).total_seconds()

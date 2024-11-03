@@ -2,6 +2,9 @@
 <html>
 <head>
     <title>Welcome to raphael's closed caption stream hosting page</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
 </head>
 <body onload="">
 <style>
@@ -19,7 +22,7 @@
 </style>
 <div id="closed_caption_block"></div>
 <div id="raphael_audio_block">
-    <audio id="audio" controls>
+    <audio id="audio">
         <source src="{{ url_for('speech') }}" type="audio/mpeg">
     </audio>
 </div>
@@ -41,6 +44,9 @@
                     //If we haven't done a hash yet,don't freak out.
                     // only play the audio, if we have hashed it before.
                     if (speach_hash != "" && audio.paused) {
+                        //add some dynamic bs at the end of the url to prevent caching of audio response
+
+                        audio.src = "{{ url_for('speech') }}?ts=" + new Date().getTime();
                         audio.load();
                         audio.play();
                     }
