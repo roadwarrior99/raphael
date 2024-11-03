@@ -14,11 +14,11 @@ my_speach_file = "speech.mp3"
 async def index():
     return render_template("index.html")
 
-@app.route("/speach")
-def speach():
+@app.route("/speech")
+def speech():
     global my_speach_file
-    if os.path.exists(os.path.dirname(os.path.realpath(__file__)) + my_speach_file):
-        return send_from_directory(os.path.dirname(os.path.realpath(__file__)), my_speach_file, mimetype='audio/mpeg')
+    if os.path.exists("/home/colin/PycharmProjects/raphael/speech.mp3"):
+        return send_from_directory("/home/colin/PycharmProjects/raphael/", "speech.mp3", mimetype='audio/mpeg')
     else:
         return "",404
 
