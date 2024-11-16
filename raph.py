@@ -455,6 +455,8 @@ class raphael_bot():
             while True:
                 indata, status = await input_queue.get()
                 yield indata, status
+
+    #unused
     def obs_play_audio(self, audio):
         if self.obsclient:
             self.logger.info("Started: obs_play_audio")
@@ -527,7 +529,9 @@ class raphael_bot():
                                             , inputKind=textinputtype, inputSettings=inputSettings)
             self.logger.info("obs_closed_caption finished calling obs.")
     def listen_local(self):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        #loop = asyncio.get_event_loop() #DeprecationWarning: There is no current event loop on windows 11
         print("Firing off Flask")
 
         thread1 = threading.Thread(target=lambda: self.myWebServ.run(
